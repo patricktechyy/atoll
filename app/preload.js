@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('atoll', {
   real: true, platform: process.platform, caps: ipcRenderer.sendSync('caps'),
   macPermissions: () => ipcRenderer.invoke('mac:permissions'),
   requestMacPermission: kind => ipcRenderer.invoke('mac:request', kind),
+  fixMacPermission: kind => ipcRenderer.invoke('mac:fix', kind),
   getStore: () => ipcRenderer.invoke('store:all'),
   getMediaSnapshot: () => ipcRenderer.invoke('media:snapshot'),
   setStore: (key, value) => ipcRenderer.invoke('store:set', key, value),

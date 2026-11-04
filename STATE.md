@@ -2,9 +2,16 @@
 
 Rewritten at the end of every session. Read it first; clear items from "Needs verifying" when you verify them.
 
-**Last updated:** 2026-11-04, macOS (Claude Sonnet 5.5). Version in the repo: 0.11.1 (0.11.0 released; 0.11.1 is the update-path test release).
+**Last updated:** 2026-11-04, macOS (Claude Sonnet 5.5). Version in the repo: 0.11.2 (0.11.0 and 0.11.1 released; 0.11.2 adds Fix permission and is not released yet).
 
-## What was done this session
+## Latest session: Mac "Fix permission" (0.11.2)
+
+- Why: every Mac build/update has a new ad hoc code fingerprint; macOS then refuses the new build while System Settings still lists Atoll as allowed (seen on the user's Mac: Calendar stopped working after the 0.11.1 update).
+- What: `app/src/mac-permissions.js` (`tccutil reset <service> app.atoll.notch`, never "All"), IPC `mac:fix` in `main.js` (Settings window only; re-requests after the reset), buttons in Settings → System (Calendar, Screen Recording, Accessibility, Automation) and Settings → Calendar. Tests: `app/test/mac-permissions.test.js` (unit) and `app/test/mac-permission-fix.test.js` (packaged, Mac; the app records the command under `ATOLL_TEST` instead of running `tccutil`, because test builds share the real bundle id).
+- Verified on macOS: both tests. NOT verified: a real reset on a real stale permission and the macOS prompts that follow (needs a human); Automation re-prompt after the helper restart; Screen Recording / Accessibility buttons were deliberately not clicked in tests.
+- Not fixed: the cause. A stable signing certificate would stop the fingerprint changing (see PARITY.md, Signing).
+
+## Earlier session: building this repo
 
 - Built this repo from the old `Atoll Workspace` folder (which held the Windows runtime and the Mac `Atoll.app` around one shared `resources/app`).
 - Added the in-app updater (`app/src/updater.js`), Settings → About UI, `app/src/platform.js` capabilities, CI and Release workflows, release tools, `AGENTS.md`/`PARITY.md`/this file.

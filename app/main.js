@@ -17,6 +17,7 @@ const { getLyrics, setDiskCache: setLyricsCache, forgetMisses, lyricsStatus } = 
 const { createSources } = require('./src/lyrics-sources');
 const { createUpdater } = require('./src/updater');
 const { capabilities } = require('./src/platform');
+const { resetPermission } = require('./src/mac-permissions');
 const { fetchCalendar } = require('./src/calendar');
 const { startNotifyServer } = require('./src/notify-server');
 const { TodolistSync, nodeTransport, electronTransport, chainTransport } = require('./src/todolist');
@@ -479,10 +480,53 @@ const safe = (fn) => async (_event, ...a) => {
 function wireIpc() {
   if (mac) {
     const { systemPreferences } = require('electron');
-    ipcMain.handle('mac:permissions', () => ({
-      screen: systemPreferences.getMediaAccessStatus('screen'),
-      accessibility: systemPreferences.isTrustedAccessibilityClient(false)
-    }));
+    ipcMain.handle('mac:permissions', async () => {
+      let calendar = null; // null: could not be read
+      try { calendar = !!JSON.parse(await require(path.join(process.resourcesPath, 'helper', 'platform.node')).calendarEvents(false)).authorized; } catch (_) {}
+      return {
+        screen: systemPreferences.getMediaAccessStatus('screen'),
+        accessibility: systemPreferences.isTrustedAccessibilityClient(false),
+        calendar
+      };
+    });
+    // "Fix permission": clear Atoll's stale entry for one permission (see src/mac-permissions.js), then ask again.
+    // Needed because every Atoll build has a new code fingerprint: after an update macOS can show Atoll as allowed
+    // while refusing it, and asking again shows no prompt. Only from the Settings window, only on the user's click.
+    ipcMain.handle('mac:fix', async (event, kind) => {
+      if (!settingsWin || event.sender !== settingsWin.webContents) return { ok: false, error: 'Open Settings to fix a permission.' };
+      const testing = process.env.ATOLL_TEST === '1';
+      // the test build shares Atoll's bundle id: tests record the command instead of clearing real permissions
+      const run = testing
+        ? async (cmd, args) => { (global.__tccCalls = global.__tccCalls || []).push([cmd, args]); }
+        : (cmd, args) => new Promise((resolve, reject) => require('child_process').execFile(cmd, args, { timeout: 15000 }, (err, _out, stderr) => (err ? reject(Object.assign(err, { stderr })) : resolve())));
+      const reset = await resetPermission(kind, { run, packaged: app.isPackaged });
+      if (!reset.ok) return reset;
+      try {
+        if (kind === 'calendar') {
+          store.set('settings', { ...settings(), calendarSource: 'apple' });
+          broadcastStore(event.sender);
+          const c = await refreshCalendar(true); // shows macOS's Calendar prompt again
+          return { ok: true, allowed: !!c.authorized, note: c.authorized ? '' : 'Choose Allow in the macOS prompt. If none appeared, quit and reopen Atoll, then try again.' };
+        }
+        if (kind === 'screen') {
+          const allowed = require(path.join(process.resourcesPath, 'helper', 'platform.node')).requestScreen();
+          if (!allowed) await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+          return { ok: true, allowed: !!allowed, note: 'macOS needs Atoll reopened before screenshots work.', restart: true };
+        }
+        if (kind === 'accessibility') {
+          const allowed = systemPreferences.isTrustedAccessibilityClient(true);
+          if (!allowed) await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+          return { ok: true, allowed: !!allowed, note: allowed ? '' : 'Switch Atoll on in the list that opened.' };
+        }
+        if (kind === 'automation' && !testing) {
+          // restart the music helper: its next request to Music / Spotify makes macOS ask again
+          native.stop();
+          for (let i = 0; i < 30 && native.procs.main; i++) await new Promise((r) => setTimeout(r, 100));
+          native.start(path.join(app.getPath('userData'), 'helper'));
+        }
+        return { ok: true, allowed: null, note: 'Play a song in Music or Spotify. macOS will ask whether Atoll may control it: choose OK.' };
+      } catch (e) { return { ok: false, error: 'The permission was cleared, but asking again failed: ' + (e.message || e) }; }
+    });
     ipcMain.handle('mac:request', async (event, kind) => {
       if (!settingsWin || event.sender !== settingsWin.webContents) return false;
       if (kind === 'screen') {

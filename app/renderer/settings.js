@@ -282,8 +282,8 @@
     return [
       mac && group(row('Calendar source', '', `<div class="seg"><button data-calendar-source="apple" class="${apple ? 'on' : ''}">Apple Calendar</button><button data-calendar-source="ics" class="${!apple ? 'on' : ''}">Calendar link</button></div>`)),
       apple && group(
-        row('Apple Calendar', cal.authorized ? 'Connected. Events from calendars on this Mac, including synced accounts.' : 'Allow Atoll to show your events and meeting reminders.', `<button class="btn accent" id="apple-cal-connect">${cal.authorized ? 'Refresh' : 'Connect Apple Calendar'}</button><button class="btn" id="apple-cal-off">Disconnect</button>`, { icon: 'calendar' }),
-        cal.error && tall('Calendar access', '', `<span class="err">${esc(cal.error)}</span>`),
+        row('Apple Calendar', cal.authorized ? 'Connected. Events from calendars on this Mac, including synced accounts.' : 'Allow Atoll to show your events and meeting reminders.', `<button class="btn accent" id="apple-cal-connect">${cal.authorized ? 'Refresh' : 'Connect Apple Calendar'}</button>${cal.authorized ? '' : '<button class="btn" data-mac-fix="calendar" title="Clears Atoll\'s saved answer in macOS and asks again">Fix permission</button>'}<button class="btn" id="apple-cal-off">Disconnect</button>`, { icon: 'calendar' }),
+        cal.error && tall('Calendar access', 'Already switched on in System Settings? After an update macOS can keep the old answer: choose Fix permission.', `<span class="err">${esc(cal.error)}</span>`),
         cal.authorized && tall('Calendars to show', 'Leave all unchecked to show every calendar.', `<div>${(cal.calendars || []).map(c => `<label style="display:flex;align-items:center;gap:8px;padding:8px"><input type="checkbox" data-apple-calendar="${esc(c.id)}" ${(s.appleCalendarIds || []).includes(c.id) ? 'checked' : ''}>${esc(c.title)}${c.account ? ' · ' + esc(c.account) : ''}</label>`).join('')}</div>`)
       ),
       group(
@@ -321,10 +321,14 @@
   async function macPermissions() {
     if (!mac) return '';
     const p = await api.macPermissions();
-    const button = (id, allowed) => allowed ? '<span class="chip good">Allowed</span>' : `<button class="btn" data-mac-permission="${id}">Request access…</button>`;
+    const fix = (id) => `<button class="btn" data-mac-fix="${id}" title="Clears Atoll's saved answer in macOS and asks again">Fix permission</button>`;
+    const button = (id, allowed) => (allowed ? '<span class="chip good">Allowed</span>' : `<button class="btn" data-mac-permission="${id}">Request access…</button>`) + fix(id);
     return h2('Mac permissions') + group(
+      row('Calendar', 'Show your events from Apple Calendar.', (p.calendar === null ? '' : p.calendar ? '<span class="chip good">Allowed</span>' : '<span class="chip">Not allowed</span>') + fix('calendar'), { icon: 'calendar' }),
       row('Screen Recording', 'Capture screenshots. Reopen Atoll after changing access.', button('screen', p.screen === 'granted'), { icon: 'camera' }),
-      row('Accessibility', 'Paste items and read visible notification banners.', button('accessibility', p.accessibility), { icon: 'clipboard' }));
+      row('Accessibility', 'Paste items and read visible notification banners.', button('accessibility', p.accessibility), { icon: 'clipboard' }),
+      row('Automation (Music, Spotify)', 'Read what is playing and where you are in the song. Asked by macOS the first time a song plays.', fix('automation'), { icon: 'music' })
+    ) + '<p class="hint">Allowed in System Settings but not working, usually after an Atoll update? Choose <b>Fix permission</b>: Atoll clears its own saved answer in macOS (nothing else) and asks again.</p>';
   }
   view.system = async () => [
     await macPermissions(),
@@ -437,6 +441,15 @@
       b.disabled = true;
       try { await api.requestMacPermission(b.dataset.macPermission); }
       finally { await rerender(); }
+    });
+    $$('[data-mac-fix]', box).forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      let r;
+      try { r = await api.fixMacPermission(b.dataset.macFix); } catch (e) { r = { ok: false, error: e.message }; }
+      if (!r || !r.ok) toast((r && r.error) || 'Could not fix the permission.');
+      else if (r.allowed) toast(r.restart ? 'Allowed. Reopen Atoll for it to take effect.' : 'Permission fixed.');
+      else toast(r.note || 'Cleared. Follow the macOS prompt.');
+      await rerender();
     });
     on('restart', () => api.restart && api.restart());
     on('quit', () => api.quit());

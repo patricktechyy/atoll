@@ -103,6 +103,8 @@
     dragNotch: () => {}, askPlace: () => {}, moveMode: () => {}, resetPosition: () => emit('place', { offset: 0, top: 0, floating: false }), shot: (m) => window.demo.shot(),
     shortcutsStatus: async () => ({ area: 'ok', full: 'ok', clipboard: 'ok', hide: 'taken' }),
     toastsStatus: async () => ({ ok: true, error: '' }),
+    macPermissions: async () => ({ screen: 'granted', accessibility: false, calendar: true }),
+    fixMacPermission: async () => ({ ok: true, allowed: true }),
     updater: {
       state: async () => ({ state: 'ready', current: '0.11.0', version: '0.11.1', notes: 'Fixes and polish.', progress: 1, canInstall: true }),
       check: async () => ({ state: 'uptodate', current: '0.11.0' }), install: async () => ({ ok: true }), openPage: async () => {}

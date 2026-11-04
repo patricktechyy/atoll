@@ -2,6 +2,10 @@
 
 Each release needs a `## <version>` section. It becomes the GitHub release notes and the in-app "What's new".
 
+## 0.11.2 - 2026-11-04
+
+- Mac: new **Fix permission** buttons. After an Atoll update macOS can keep showing Atoll as allowed (Calendar, Screen Recording, Accessibility, Automation for Music and Spotify) while refusing the new version, and asking again shows no prompt. Fix permission clears Atoll's own saved answer in macOS (nothing else) and asks again. Find it in Settings → System → Mac permissions, and next to Connect in Settings → Calendar when access is missing.
+
 ## 0.11.1 - 2026-11-04
 
 - Update test release: no feature changes. If you can read this under Settings → About after an update, in-app updating works.

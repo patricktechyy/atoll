@@ -52,6 +52,7 @@ jobs:
           ATOLL_APP: ${{ github.workspace }}/dist/Atoll.app
         run: |
           node app/test/apple-calendar-ui.test.js
+          node app/test/mac-permission-fix.test.js
           node native/mac/qa/workflows-qa.cjs "$ATOLL_APP"
           node native/mac/qa/qa.cjs "$ATOLL_APP"
 
