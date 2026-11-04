@@ -1,0 +1,77 @@
+/* Atoll 0.10.1: quiet surfaces, visible controls, motion without blur passes. */
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: .45; cursor: default; }
+.page { padding-top: 20px; }
+.page.from-r { transform: translateX(18px); }
+.page.from-l { transform: translateX(-18px); }
+.page.on { transform: none; }
+#shade { box-shadow: 0 8px 20px rgba(0,0,0,.3); }
+body.lite #shade { box-shadow: 0 5px 12px rgba(0,0,0,.24); }
+.np-top { gap: 16px; }
+.np-art { border-radius: 15px; box-shadow: inset 0 0 0 1px var(--line); }
+#m-title { font-size: 17px; letter-spacing: -.25px; }
+#m-artist { margin-top: 4px; }
+.np-controls { gap: 22px; }
+.ctl.main { background: var(--fg); color: var(--bg); }
+.ctl.main:hover { background: var(--tint); color: #111; }
+.ctl.main:active { transform: scale(.94); }
+#m-bar .fill i { background: var(--tint); }
+.dots-row { height: 22px; gap: 5px; }
+.dots { height: 22px; gap: 3px; }
+.dots button { width: auto; height: 22px; padding: 0 9px; border-radius: 7px; background: transparent; color: var(--fg3); font-size: 10px; font-weight: 600; transition: background .14s, color .14s; }
+.dots button.on { width: auto; background: var(--fill2); color: var(--fg); }
+.dots button:hover { background: var(--fill); color: var(--fg); }
+.pg-btn { height: 22px; }
+#island.state-panel #gear { opacity: .65; }
+#island.state-panel #gear:hover, #island.state-panel #gear:focus-visible { opacity: 1; }
+.ly-head { padding-bottom: 9px; border-bottom: 1px solid var(--line); }
+#m-lyr { transition-duration: .4s; }
+#m-lyr li { font-weight: 650; transform: none; transition: color .22s; }
+#m-lyr li.on { color: var(--tint); }
+.home-card { border: 1px solid var(--line); }
+.pill { transition: background .15s, transform .12s; }
+.pill:hover { filter: none; background: var(--track); }
+.pill.accent:hover { background: var(--fg); opacity: .88; }
+.wing .bar i { will-change: auto; }
+/* Hidden visualizers must not keep compositor animations alive. */
+.layer:not(.on) .viz i, .page:not(.on) .viz i,
+#bubble:not(.on) .viz i, .layer:not(.on) .gapdots i { animation: none !important; }
+body.lite .m-lyrics { mask-image: none; -webkit-mask-image: none; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* 0.10.3 spacing and progress geometry */
+.page { padding-bottom: 44px; }
+#m-bar .fill, #m-bar .fill i, #m-bar .kt { display: block; width: 100%; height: 100%; }
+#m-bar .fill i { transform-origin: left; }
+#m-bar .kt { width: 0; right: auto; }
+.home-row { height: 106px; }
+.mini.cal { padding: 12px; gap: 4px; }
+.mini.cal > span:not(.k) { padding-right: 64px; white-space: normal; line-height: 1.35; }
+.mini.cal .chip-btn { bottom: 10px; right: 10px; }
+#cal-page { padding: 8px 8px 12px; }
+.cal-day { margin: 16px 2px 8px; line-height: 1.4; }
+.cal-day:first-child { margin-top: 4px; }
+.cal-ev { padding-top: 10px; padding-bottom: 10px; }
+
+#snap-guide { display:none; position:fixed; pointer-events:none; z-index:999; opacity:.6; }
+#snap-guide.x { height:100vh; width:0; border-left:1px dashed var(--accent); }
+#snap-guide.y { width:100vw; height:0; border-top:1px dashed var(--accent); }
+#snap-guide.matched { opacity:1; border-style:solid; }
+#island.side .dots button { padding:0 6px; }
+#island.side .today.only-tasks { width:100%; }
+
+/* 0.10.6: consistent scrolling and lyric rows that can grow. */
+#t-list, .c-under, #m-lyr li { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+#t-list:hover, #t-list:focus-within, .c-under:hover, #m-lyr li:hover { scrollbar-color: var(--fg3) transparent; }
+#t-list::-webkit-scrollbar, .c-under::-webkit-scrollbar, #m-lyr li::-webkit-scrollbar { width:5px; }
+#t-list::-webkit-scrollbar-track, .c-under::-webkit-scrollbar-track { background:transparent; }
+#t-list::-webkit-scrollbar-thumb, .c-under::-webkit-scrollbar-thumb, #m-lyr li::-webkit-scrollbar-thumb { background:var(--fill2); border-radius:999px; }
+#t-list { padding-right:4px; border-radius:10px; }
+.ctl.main { padding:0; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.ctl.main svg { display:block; flex-shrink:0; margin:0; }
+.c-under { display:block; -webkit-line-clamp:unset; max-height:152px; overflow-y:auto; overflow-wrap:anywhere; white-space:normal; }
+.c-under small { white-space:normal; overflow:visible; text-overflow:clip; }
+#m-lyr li { overflow-y:auto; overflow-wrap:anywhere; }
+.m-lyrics.long-line { mask-image:none; -webkit-mask-image:none; }

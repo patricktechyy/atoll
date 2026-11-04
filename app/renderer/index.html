@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: atoll:; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src 'self' data:">
+  <title>Atoll</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="refresh.css">
+</head>
+<body>
+  <!-- The island. Closed it's a small black notch; live activities grow out of its sides ("wings")
+       with the middle left empty, a second activity splits off into its own bubble, and hovering
+       opens it into a panel of swipeable pages. -->
+  <div id="island" class="state-idle">
+    <i id="shade"></i><i class="ear left"></i><i class="ear right"></i>
+    <div id="shell">
+
+      <!-- closed: live activity on the wings -->
+      <div class="layer" id="compact">
+        <div class="wing l" id="wl"></div>
+        <div class="wing r" id="wr"></div>
+        <div class="c-under" id="c-under"></div>
+      </div>
+
+      <!-- transient HUD: volume, caps lock, language, charging… -->
+      <div class="layer" id="hud">
+        <div class="wing l" id="hl"></div>
+        <div class="wing r" id="hr"></div>
+      </div>
+
+      <!-- notification dropped out of the notch -->
+      <div class="layer" id="notif">
+        <div id="n-icon"></div>
+        <img id="n-img" alt="">
+        <div class="n-text">
+          <div class="n-top"><b id="n-title"></b><span id="n-app"></span></div>
+          <div id="n-body"></div>
+        </div>
+        <div id="n-actions"></div>
+      </div>
+
+      <!-- move mode -->
+      <div class="layer" id="mover">
+        <span class="grip"></span>
+        <span class="mv-text"><b>Drag me anywhere</b><small>Arrow keys to fine-tune · Shift = bigger steps</small></span>
+        <button class="pill small accent" id="mv-done">Done</button>
+      </div>
+
+      <!-- side mode: slim vertical pill -->
+      <div class="layer" id="side">
+        <div class="s-icon"><img id="s-art" alt=""><span id="s-bot" class="bot"></span><div id="s-eyes"><i class="eye"></i><i class="eye"></i></div></div>
+        <div class="s-clock"><b id="s-hh">--</b><b id="s-mm">--</b></div>
+        <div id="s-eq" class="viz"><i></i><i></i><i></i><i></i></div>
+        <div id="s-timer"></div>
+      </div>
+
+      <!-- open: pages, swiped sideways; dots at the bottom -->
+      <div class="layer" id="panel">
+        <!-- Tabs layout only: clock, tab bar, pin (built when that layout is on) -->
+        <header id="tabbar" hidden>
+          <div class="tb-time"><b id="tb-clock"></b><span id="tb-date"></span></div>
+          <nav id="tabs"></nav>
+          <button class="tb-pin" id="pin" title="Keep open"></button>
+        </header>
+        <div class="pages" id="pages">
+
+          <!-- Tabs layout: Home = the player with lyrics beside it, and small cards underneath -->
+          <section class="page" data-page="home">
+            <div class="home">
+              <div class="home-card"><div id="home-player"></div><div id="home-lyr"></div></div>
+              <div class="home-row" id="home-row"></div>
+            </div>
+          </section>
+          <section class="page" data-page="calendar"><div id="cal-page" class="scroll"></div></section>
+          <section class="page" data-page="stats"><div id="stats-page"></div></section>
+
+          <section class="page" data-page="now">
+            <div class="np" id="music">
+              <div class="np-top">
+                <button class="np-art" id="np-art" title="Open the player"><img id="m-art" alt=""><span id="m-art-empty"></span></button>
+                <div class="np-meta">
+                  <div id="m-title">Not playing</div>
+                  <div id="m-artist">Play something in Spotify, YouTube or any media app</div>
+                </div>
+                <div class="viz big" id="np-viz"><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+              <div class="np-progress">
+                <span id="m-pos">0:00</span>
+                <div id="m-bar"><span class="fill"><i></i></span><span class="kt"><b class="knob"></b></span></div>
+                <span id="m-dur">0:00</span>
+              </div>
+              <div class="np-controls">
+                <button class="ctl side" id="np-lyrics" title="Lyrics"></button>
+                <button class="ctl" data-media="prev" title="Previous"></button>
+                <button class="ctl main" data-media="toggle" id="m-toggle" title="Play / pause"></button>
+                <button class="ctl" data-media="next" title="Next"></button>
+                <span class="ctl side app" id="m-app"></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="page" data-page="lyrics">
+            <div class="ly-head">
+              <img id="ly-art" alt=""><div class="ly-meta"><b id="ly-title"></b><span id="ly-artist"></span></div>
+              <button class="chip-btn" id="m-tr-toggle" title="Translation"></button>
+              <button class="chip-btn" id="lyr-smaller" title="Smaller">A−</button>
+              <button class="chip-btn" id="lyr-bigger" title="Bigger">A+</button>
+            </div>
+            <div class="m-lyrics" id="m-lyrics"><ol id="m-lyr"></ol><div id="m-lyr-empty"></div></div>
+            <div id="lyrics-list" hidden></div>
+          </section>
+
+          <section class="page" data-page="today">
+            <div class="today">
+              <div class="t-col">
+                <div class="h-row"><span class="h">Up next</span><span class="h-sub" id="ag-sub"></span></div>
+                <div id="agenda"></div>
+                <div class="h-row"><span class="h">Tasks</span><span class="h-sub" id="t-head"></span></div>
+                <form id="t-form" class="t-form"><input id="t-text" placeholder="Add a task…" maxlength="160" autocomplete="off"><input id="t-time" type="hidden">
+                  <div class="task-time">
+                    <button type="button" id="t-time-open" aria-haspopup="dialog" aria-expanded="false" aria-controls="t-time-picker" title="Remind me at"><span id="t-time-label">Set time</span><span aria-hidden="true">◷</span></button>
+                    <div id="t-time-picker" role="dialog" aria-label="Reminder time" hidden>
+                      <div class="task-time-fields"><label>Hour<input id="t-hour" form="t-time-editor" type="number" min="0" max="23" step="1" aria-label="Hour (0–23)"></label><span>:</span><label>Minute<input id="t-minute" form="t-time-editor" type="number" min="0" max="59" step="1" aria-label="Minute (0–59)"></label></div>
+                      <span class="task-time-hint">24-hour time</span>
+                      <div class="task-time-actions"><button type="button" id="t-time-clear" class="chip-btn">Clear</button><button type="button" id="t-time-done" class="chip-btn">Done</button></div>
+                    </div>
+                  </div></form>
+                <ul id="t-list"></ul>
+              </div>
+              <div class="w-col">
+                <div class="widget" id="focus-w">
+                  <svg id="f-ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="track"/><circle cx="60" cy="60" r="52" class="fill"/></svg>
+                  <div class="w-in"><span id="f-mode">Focus</span><b id="f-time">25:00</b></div>
+                  <div class="w-btns"><button class="pill small accent" id="f-start">Start</button><button class="pill small" id="f-reset">Reset</button></div>
+                </div>
+                <div class="widget" id="water-w">
+                  <svg id="w-ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="track"/><circle cx="60" cy="60" r="52" class="fill"/></svg>
+                  <div class="w-in"><span id="w-goal">of 2000 ml</span><b id="w-ml">0</b></div>
+                  <div class="w-btns"><button class="pill small accent" id="w-add">+ 250</button><button class="pill small" id="w-undo">Undo</button></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="page" data-page="clipboard">
+            <div class="cb-head">
+              <input id="cb-search" placeholder="Search clipboard" autocomplete="off">
+              <button class="chip-btn" id="cb-pause"></button>
+              <button class="chip-btn" id="cb-clear">Clear</button>
+            </div>
+            <div class="cb-status" id="cb-status"></div>
+            <div id="cb-list" class="scroll"></div>
+          </section>
+
+          <section class="page" data-page="files">
+            <div id="shelf-drop">
+              <div id="shelf-empty"><b>Drop files here</b><span>Keep them handy, then drag them out to any app</span></div>
+              <div id="shelf-grid" class="scroll"></div>
+            </div>
+            <div class="shelf-head">
+              <button class="chip-btn" id="shelf-shot-area">Screenshot area</button>
+              <button class="chip-btn" id="shelf-shot-full">Full screen</button>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div id="panel-tip"></div>
+      <button class="corner-btn" id="gear" title="Settings"></button>
+      <!-- page dots + settings: part of the shape (they ride its bottom edge), shown with the panel -->
+      <div class="dots-row" id="dots-row">
+        <button class="pg-btn" id="pg-prev" title="Previous page"></button>
+        <div class="dots" id="dots"></div>
+        <button class="pg-btn" id="pg-next" title="Next page"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- a second live activity splits off into its own little island -->
+  <div id="bubble"><i class="ear left"></i><i class="ear right"></i><div class="b-shell"><div id="b-in"></div></div></div>
+
+  <script src="motion.js"></script>
+  <script src="icons.js"></script>
+  <script src="mock.js"></script>
+  <script src="apple-clock.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

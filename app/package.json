@@ -1,0 +1,88 @@
+{
+  "name": "atoll",
+  "productName": "Atoll",
+  "version": "0.11.0",
+  "description": "A living Dynamic Island for Windows and macOS: music, lyrics, focus, calendar, notifications and system stats in your notch.",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "demo": "electron . --demo",
+    "helper": "node ../native/win/build-helper.js",
+    "dist:win": "node ../native/win/build-helper.js && electron-builder --win nsis --publish never",
+    "dist:win:dir": "node ../native/win/build-helper.js && electron-builder --win --dir --publish never",
+    "build:mac": "bash ../native/mac/build.sh ../dist/Atoll.app",
+    "test": "npm run test:unit",
+    "test:unit": "node test/reminders-timing.test.js && node test/lyrics-app-only.test.js && node test/apple-storefront.test.js && node test/understood-languages.test.js && node test/updater.test.js && node test/release-tools.test.js",
+    "test:ui": "node test/task-time-ui.test.js && node test/display-select.test.js && node test/lyrics-ui.test.js && node test/updater-ui.test.js",
+    "test:mac": "node test/apple-calendar-ui.test.js && node ../native/mac/qa/workflows-qa.cjs && node ../native/mac/qa/qa.cjs",
+    "test:win": "node test/win-smoke.test.js"
+  },
+  "devDependencies": {
+    "electron": "45.2.1",
+    "electron-builder": "26.0.12",
+    "playwright": "1.64.1"
+  },
+  "build": {
+    "appId": "app.atoll.notch",
+    "productName": "Atoll",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**",
+      "renderer/**",
+      "assets/**",
+      "!assets/src/**"
+    ],
+    "asarUnpack": [
+      "src/*.ps1",
+      "src/helper/*.cs"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Atoll-Setup-${version}.${ext}",
+      "shortcutName": "Atoll",
+      "createDesktopShortcut": true
+    },
+    "extraResources": [
+      {
+        "from": "build/helper",
+        "to": "helper",
+        "filter": [
+          "*.exe"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "../dist",
+      "buildResources": "assets"
+    },
+    "compression": "maximum",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "patricktechyy",
+        "repo": "atoll"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/patricktechyy/atoll.git"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.12"
+  }
+}

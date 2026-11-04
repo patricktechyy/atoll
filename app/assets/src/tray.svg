@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- tray glyph: the island with its lagoon dot cut out; COLOR is swapped for light/dark taskbars -->
+  <path fill="COLOR" fill-rule="evenodd" d="M9.5 9.5h13a6.5 6.5 0 0 1 0 13h-13a6.5 6.5 0 0 1 0-13zM22 13.4a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2zM8.6 14.2a1.1 1.1 0 0 0-1.1 1.1v1.4a1.1 1.1 0 0 0 2.2 0v-1.4a1.1 1.1 0 0 0-1.1-1.1zm3.4-1.6a1.1 1.1 0 0 0-1.1 1.1v4.6a1.1 1.1 0 0 0 2.2 0v-4.6a1.1 1.1 0 0 0-1.1-1.1z"/>
+</svg>

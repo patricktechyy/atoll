@@ -1,0 +1,80 @@
+name: CI
+
+# Every push and pull request is built and tested on BOTH platforms. A change is not done until all jobs are green.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit:
+    name: Unit tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci --prefix app
+      - name: Syntax check every JavaScript file
+        shell: bash
+        run: |
+          set -e
+          for f in app/main.js app/preload.js app/src/*.js app/renderer/*.js app/test/*.js tools/*.js native/win/*.js; do node --check "$f"; done
+      - run: npm test --prefix app
+
+  mac:
+    name: macOS app (build + UI tests)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci --prefix app
+      - name: Build Atoll.app
+        run: bash native/mac/build.sh dist/Atoll.app
+      - name: UI tests (shared)
+        env:
+          ATOLL_APP: ${{ github.workspace }}/dist/Atoll.app
+        run: npm run test:ui --prefix app
+      - name: UI tests (macOS only)
+        env:
+          ATOLL_APP: ${{ github.workspace }}/dist/Atoll.app
+        run: |
+          node app/test/apple-calendar-ui.test.js
+          node native/mac/qa/workflows-qa.cjs "$ATOLL_APP"
+          node native/mac/qa/qa.cjs "$ATOLL_APP"
+
+  windows:
+    name: Windows app (build + UI tests)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci --prefix app
+      - name: Build the unpacked Windows app (compiles the native helpers with csc)
+        run: npm run dist:win:dir --prefix app
+        env:
+          ATOLL_REQUIRE_FRESH_HELPER: "0"   # set to "1" once the helper compiles cleanly on the runner
+      - name: UI tests (shared)
+        env:
+          ATOLL_APP: ${{ github.workspace }}\dist\win-unpacked\Atoll.exe
+        run: npm run test:ui --prefix app
+      - name: Windows smoke test
+        env:
+          ATOLL_APP: ${{ github.workspace }}\dist\win-unpacked\Atoll.exe
+        run: npm run test:win --prefix app

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Atoll screenshot</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; cursor: crosshair; user-select: none; font: 12px "Segoe UI", system-ui, sans-serif; }
+    #shot { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #dim { position: absolute; inset: 0; }
+    #box { position: absolute; display: none; outline: 1.5px solid #fff; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .45); }
+    #box::after { content: ""; position: absolute; inset: -1.5px; outline: 1px dashed rgba(0, 0, 0, .6); }
+    #size { position: absolute; display: none; background: rgba(0, 0, 0, .75); color: #fff; padding: 3px 7px; border-radius: 6px; font-variant-numeric: tabular-nums; pointer-events: none; }
+    #hint { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, .75); color: #fff; padding: 8px 14px; border-radius: 18px; pointer-events: none; transition: opacity .2s; }
+    body.full #dim { background: rgba(0, 0, 0, .45); }
+    #lx, #ly { position: absolute; background: rgba(255, 255, 255, .55); pointer-events: none; }
+    #lx { height: 1px; left: 0; right: 0; } #ly { width: 1px; top: 0; bottom: 0; }
+  </style>
+</head>
+<body class="full">
+  <img id="shot" alt="">
+  <div id="dim"></div>
+  <div id="lx"></div><div id="ly"></div>
+  <div id="box"></div>
+  <div id="size"></div>
+  <div id="hint">Drag to capture an area · Esc to cancel · Enter for the whole screen</div>
+  <script src="snip.js"></script>
+</body>
+</html>

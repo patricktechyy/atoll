@@ -1,0 +1,12 @@
+{
+  "name": "atoll-repo",
+  "private": true,
+  "description": "Atoll monorepo wrapper. The app and its version live in app/package.json.",
+  "scripts": {
+    "install:app": "npm ci --prefix app",
+    "test": "npm test --prefix app",
+    "test:ui": "npm run test:ui --prefix app",
+    "build:mac": "npm run build:mac --prefix app",
+    "dist:win": "npm run dist:win --prefix app"
+  }
+}

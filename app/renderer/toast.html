@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: atoll:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Atoll notification</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body { background: transparent; }
+    #card { position: absolute; width: 420px; height: 78px; opacity: 0; }
+    #card.img { width: 460px; }
+    #card .cshell { position: absolute; inset: 0; background: var(--bg); border-radius: 24px; overflow: hidden; box-shadow: var(--shadow); }
+    #card .ear { display: none; }
+    /* top centre: hangs from the top edge like the notch itself */
+    #card.p-top-center { top: 0; left: 50%; margin-left: -210px; }
+    #card.img.p-top-center { margin-left: -230px; }
+    #card.p-top-center .cshell { border-radius: 0 0 28px 28px; }
+    #card.p-top-center .ear { display: block; }
+    #card.p-top-left { top: 12px; left: 12px; }
+    #card.p-top-right { top: 12px; right: 12px; }
+    #card.p-bottom-center { bottom: 14px; left: 50%; margin-left: -210px; }
+    #card.img.p-bottom-center { margin-left: -230px; }
+    #card.p-bottom-right { bottom: 14px; right: 12px; }
+    #card.p-bottom-left { bottom: 14px; left: 12px; }
+    #notif { position: absolute; inset: 0; }
+    #bar { position: absolute; left: 22px; right: 22px; bottom: 6px; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--fg) 10%, transparent); overflow: hidden; }
+    #bar i { display: block; height: 100%; width: 100%; background: color-mix(in srgb, var(--accent) 70%, transparent); transform-origin: left; }
+  </style>
+</head>
+<body>
+  <div id="card">
+    <i class="ear left"></i><i class="ear right"></i>
+    <div class="cshell">
+      <div id="notif">
+        <div id="n-icon"></div>
+        <img id="n-img" alt="">
+        <div class="n-text">
+          <div class="n-top"><b id="n-title"></b><span id="n-app"></span></div>
+          <div id="n-body"></div>
+        </div>
+        <div id="n-actions"></div>
+      </div>
+      <div id="bar"><i></i></div>
+    </div>
+  </div>
+  <script src="motion.js"></script>
+  <script src="toast.js"></script>
+</body>
+</html>

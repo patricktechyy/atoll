@@ -1,0 +1,72 @@
+// Lyric translation + romanization (romaji, pinyin, romanized Korean…) through Google Translate's
+// free web endpoint (the one browser extensions use; no API key). It's unofficial, so it can rate
+// limit; we translate a whole song in one request and cache it.
+const cache = new Map();
+const ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
+
+// Response: [[ [translated, original, …], …, [null, null, targetRoman, sourceRoman] ], null, "ja", …]
+function parseGtx(data) {
+  if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error('Unexpected translate response');
+  const parts = data[0].filter(Array.isArray);
+  const text = parts.filter((p) => typeof p[0] === 'string').map((p) => p[0]).join('');
+  const rom = parts.filter((p) => p[0] == null && typeof p[3] === 'string').map((p) => p[3]).join('');
+  const lang = typeof data[2] === 'string' ? data[2] : (data[8] && data[8][0] && data[8][0][0]) || '';
+  return { text, rom, lang };
+}
+
+async function gtx(q, to, translate = true) {
+  const url = `${ENDPOINT}?client=gtx&sl=auto&tl=${encodeURIComponent(to)}${translate ? '&dt=t' : ''}&dt=rm`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Atoll/0.3' },
+    body: 'q=' + encodeURIComponent(q)
+  });
+  if (!res.ok) throw new Error(`Translate returned ${res.status}`);
+  return parseGtx(await res.json());
+}
+
+const splitLines = (s) => s.replace(/\r/g, '').split('\n').map((x) => x.trim());
+const isLatin = (s) => !/[^\u0000-ɏḀ-ỿ\s\d\p{P}\p{S}]/u.test(s);
+
+// lines: ["…", "…"] -> { lang, items: [{ tr, rom }] } (same length as lines)
+async function translateLines(key, lines, to = 'en', understoodLanguages = []) {
+  const baseLanguage = code => String(code).toLowerCase().split(/[-_]/)[0];
+  const understood = [...new Set((Array.isArray(understoodLanguages) ? understoodLanguages : []).map(baseLanguage))].sort();
+  const ck = JSON.stringify([key, to, understood]);
+  if (cache.has(ck)) return cache.get(ck);
+  const idx = [];
+  const src = [];
+  lines.forEach((l, i) => { const t = (l || '').trim(); if (t && t !== '♪') { idx.push(i); src.push(t); } });
+  const items = lines.map(() => ({ tr: '', rom: '' }));
+  if (!src.length) return { lang: '', items, same: true };
+
+  // Detect without asking for translated text when the user has exclusions.
+  // Romanization remains available even for a language they understand.
+  const detected = understood.length ? await gtx(src.join('\n'), to, false) : null;
+  const skipped = !!detected && understood.includes(baseLanguage(detected.lang));
+  const whole = skipped ? detected : await gtx(src.join('\n'), to);
+  let tr = splitLines(whole.text);
+  let rom = whole.rom ? splitLines(whole.rom) : [];
+  if ((!skipped && tr.length !== src.length) || (src.some(s => !isLatin(s)) && (rom.length !== src.length || rom.some((r,i) => !r && !isLatin(src[i]))))) {
+    // the service merged or split lines: fall back to one request per line (4 at a time)
+    tr = new Array(src.length).fill(''); rom = new Array(src.length).fill('');
+    for (let i = 0; i < src.length; i += 4) {
+      const batch = await Promise.all(src.slice(i, i + 4).map((s) => gtx(s, to, !skipped).catch(() => ({ text: '', rom: '' }))));
+      batch.forEach((r, k) => { tr[i + k] = r.text.trim(); rom[i + k] = (r.rom || '').trim(); });
+    }
+  }
+  if (rom.length !== src.length) rom = [];
+  idx.forEach((li, k) => {
+    const t = tr[k] || '';
+    items[li] = {
+      tr: skipped ? '' : t.toLowerCase() === src[k].toLowerCase() ? '' : t,
+      rom: rom[k] && !isLatin(src[k]) && rom[k].toLowerCase() !== src[k].toLowerCase() ? rom[k] : ''
+    };
+  });
+  const out = { lang: whole.lang, skipped, items, same: whole.lang === to || whole.lang.split('-')[0] === to.split('-')[0] };
+  cache.set(ck, out);
+  if (cache.size > 100) cache.delete(cache.keys().next().value);
+  return out;
+}
+
+module.exports = { translateLines, parseGtx };

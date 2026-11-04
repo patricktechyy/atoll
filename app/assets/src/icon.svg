@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Atoll app icon: a night-lagoon tile with the island (notch) floating on it -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16324a"/>
+      <stop offset=".55" stop-color="#0b1a2a"/>
+      <stop offset="1" stop-color="#060d16"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy="1.05" r=".75">
+      <stop offset="0" stop-color="#30d5c8" stop-opacity=".55"/>
+      <stop offset=".5" stop-color="#30d5c8" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#30d5c8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a1d22"/>
+      <stop offset=".18" stop-color="#050607"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <radialGradient id="dot" cx=".38" cy=".35" r=".7">
+      <stop offset="0" stop-color="#b8fff6"/>
+      <stop offset=".45" stop-color="#30d5c8"/>
+      <stop offset="1" stop-color="#0f8f86"/>
+    </radialGradient>
+    <filter id="soft" x="-30%" y="-60%" width="160%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>
+    <clipPath id="tile"><rect width="256" height="256" rx="58"/></clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="256" height="256" fill="url(#bg)"/>
+    <rect width="256" height="256" fill="url(#glow)"/>
+    <!-- faint ring: the atoll -->
+    <ellipse cx="128" cy="168" rx="92" ry="30" fill="none" stroke="#30d5c8" stroke-opacity=".18" stroke-width="3"/>
+    <ellipse cx="128" cy="168" rx="64" ry="19" fill="none" stroke="#30d5c8" stroke-opacity=".10" stroke-width="2"/>
+    <!-- the island's shadow on the water -->
+    <rect x="58" y="118" width="140" height="44" rx="22" fill="#000" opacity=".55" filter="url(#soft)"/>
+    <!-- the island -->
+    <rect x="50" y="98" width="156" height="56" rx="28" fill="url(#pill)"/>
+    <rect x="50.75" y="98.75" width="154.5" height="54.5" rx="27.25" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="1.5"/>
+    <!-- equaliser -->
+    <g fill="#30d5c8">
+      <rect x="76" y="117" width="6" height="18" rx="3" opacity=".95"/>
+      <rect x="87" y="110" width="6" height="32" rx="3"/>
+      <rect x="98" y="120" width="6" height="12" rx="3" opacity=".85"/>
+    </g>
+    <!-- lagoon dot -->
+    <circle cx="176" cy="126" r="11" fill="#30d5c8" opacity=".35" filter="url(#soft)"/>
+    <circle cx="176" cy="126" r="9" fill="url(#dot)"/>
+  </g>
+</svg>

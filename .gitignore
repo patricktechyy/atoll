@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.cache/
+app/build/
+.DS_Store
+*.log

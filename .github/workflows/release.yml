@@ -1,0 +1,113 @@
+name: Release
+
+# Publish a Release on GitHub (Releases -> Draft a new release -> choose a NEW tag like v0.11.0 -> Publish).
+# This workflow then builds both platforms and attaches the files the in-app updater reads:
+#   Windows: Atoll-Setup-<version>.exe, latest.yml, .blockmap     (electron-updater)
+#   macOS:   Atoll-macOS-arm64.zip, latest-mac.json               (custom updater in app/src/updater.js)
+# The tag must be v<version in app/package.json>, and CHANGELOG.md needs a "## <version>" section.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to (re)build, for example v0.11.0
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  check:
+    name: Check tag and changelog
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: v
+        run: |
+          node tools/release-notes.js check "$TAG"
+          echo "version=$(node -p "require('./app/package.json').version")" >> "$GITHUB_OUTPUT"
+      - run: node tools/release-notes.js notes "${{ steps.v.outputs.version }}" > /dev/null
+
+  mac:
+    name: macOS build
+    needs: check
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci --prefix app
+      - run: npm test --prefix app
+      - run: bash native/mac/build.sh dist/Atoll.app
+      - name: UI tests on the built app
+        env:
+          ATOLL_APP: ${{ github.workspace }}/dist/Atoll.app
+        run: npm run test:ui --prefix app
+      - name: Package and write the update feed
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent dist/Atoll.app Atoll-macOS-arm64.zip
+          node tools/release-notes.js mac-feed "${{ needs.check.outputs.version }}" Atoll-macOS-arm64.zip latest-mac.json
+          shasum -a 256 Atoll-macOS-arm64.zip | cut -d' ' -f1 > Atoll-macOS-arm64.zip.sha256
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" Atoll-macOS-arm64.zip Atoll-macOS-arm64.zip.sha256 latest-mac.json --clobber
+
+  windows:
+    name: Windows build
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci --prefix app
+      - run: npm test --prefix app
+      - name: Build the installer
+        run: npm run dist:win --prefix app
+      - name: Attach to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls dist
+          gh release upload "$TAG" "dist/Atoll-Setup-${{ needs.check.outputs.version }}.exe" "dist/Atoll-Setup-${{ needs.check.outputs.version }}.exe.blockmap" dist/latest.yml --clobber
+
+  notes:
+    name: Release notes
+    needs: [check, mac, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Put the changelog section in the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node tools/release-notes.js notes "${{ needs.check.outputs.version }}" > notes.md
+          gh release edit "$TAG" --notes-file notes.md
