@@ -2,6 +2,10 @@
 
 Each release needs a `## <version>` section. It becomes the GitHub release notes and the in-app "What's new".
 
+## 0.11.1 - 2026-11-04
+
+- Update test release: no feature changes. If you can read this under Settings → About after an update, in-app updating works.
+
 ## 0.11.0 - 2026-11-04
 
 - Atoll now updates itself on Windows and macOS. Settings → About shows the current version, checks in the background every few hours, downloads new versions and installs them when you choose Restart. Turn off "Update automatically" there if you prefer.

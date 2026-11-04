@@ -2,7 +2,7 @@
 
 Rewritten at the end of every session. Read it first; clear items from "Needs verifying" when you verify them.
 
-**Last updated:** 2026-11-04, macOS (Claude Sonnet 5.5). Version in the repo: 0.11.0 (not yet released).
+**Last updated:** 2026-11-04, macOS (Claude Sonnet 5.5). Version in the repo: 0.11.1 (0.11.0 released; 0.11.1 is the update-path test release).
 
 ## What was done this session
 
