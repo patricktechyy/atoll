@@ -1,10 +1,10 @@
-const { launchAtoll } = require('./launch');
+const { launchAtoll, openTab } = require('./launch');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
 (async()=>{
   const { app, close } = await launchAtoll();
   try {
     const p=await app.firstWindow();await p.waitForFunction(()=>!!window.API);
-    const open=()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.send('open-tab','todo'));
+    const open=()=>openTab(app,p,'todo',{visible:'#t-time-open'});
     await open(); await p.locator('#t-time-open').click();
     await p.locator('#t-hour').fill('13'); await p.locator('#t-minute').fill('25'); await p.locator('#t-minute').press('Enter');
     assert.equal(await p.locator('#t-time').inputValue(),'13:25');

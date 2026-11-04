@@ -1,4 +1,5 @@
 const { _electron }=require(process.env.ATOLL_PLAYWRIGHT_MODULE || require.resolve('playwright', { paths: [require('node:path').join(__dirname, '..', '..', '..', 'app')] }));
+const { openTab: openTabHelper } = require('../../../app/test/launch');
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 (async()=>{
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'atoll-flows-'));
@@ -7,7 +8,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),asse
   try {
     const p=await app.firstWindow();const errors=[];p.on('pageerror',e=>errors.push(e.message));
     await p.waitForFunction(async()=>window.API && (await window.API.diagnostics()).helper.alive);
-    const openTab=tab=>app.evaluate(({BrowserWindow},t)=>BrowserWindow.getAllWindows()[0].webContents.send('open-tab',t),tab);
+    const openTab=tab=>openTabHelper(app,p,tab);
     await openTab('today');
     await p.locator('#w-add').click();
     assert.equal((await p.evaluate(()=>API.getStore())).water.ml,250);

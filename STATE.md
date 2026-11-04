@@ -31,6 +31,7 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 - Real Apple Music and Spotify lyric fetching with signed-in accounts (verified once by hand at 0.10.9 for Apple Music).
 - Real Apple Calendar permission grant and real events (UI is tested with a stubbed reader; the EventKit query runs unauthorized in tests).
 - Release workflow on a real GitHub Release (asset names, `latest-mac.json`), then an in-app update from a downloaded 0.11.0 to 0.11.1.
+- CI flake: `app/test/task-time-ui.test.js` failed once on the macos-14 runner at its first click (panel control never visible) with the same code that passed the run before. Not reproduced locally. Tests now use `openTab()` in `app/test/launch.js` (re-sends the open command, waits for the control, prints page/app state on failure). If it fails again, read that printed state.
 - `native/mac/qa/qa.cjs` has failed once on the first launch of some fresh builds and passes on rerun; cause not found.
 - First CI run: Windows build, shared UI tests and Windows smoke test passed; the macOS-only step failed because the Mac QA scripts could not find Playwright (fixed: they now resolve it from `app/`). CI is now green on both OSes (run on commit f4ceb3f: unit tests, macOS build + UI + Mac tests, Windows build + UI + smoke).
 

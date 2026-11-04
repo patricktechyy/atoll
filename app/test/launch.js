@@ -35,4 +35,25 @@ async function launchAtoll({ settings, extra, env = {}, app: appPath } = {}) {
   return { app, profile, close };
 }
 
-module.exports = { launchAtoll, makeProfile, executable };
+// Ask the notch to open a tab, and make sure it did. The bridge (window.API) exists before the page's own
+// script has registered its handlers, so on a slow machine the first message can be lost: send it again
+// until the panel is open (and, if given, until `visible` can be seen). On failure the error says what the
+// app looked like, so a CI-only failure can be diagnosed from its log.
+async function openTab(app, page, tab, { tries = 8, visible } = {}) {
+  const target = visible ? { selector: visible, state: 'visible' } : { selector: '#island.state-panel', state: 'attached' };
+  for (let i = 0; i < tries; i++) {
+    await app.evaluate(({ BrowserWindow }, t) => {
+      const w = BrowserWindow.getAllWindows().find((x) => /renderer[\\/]index\.html/.test(x.webContents.getURL())) || BrowserWindow.getAllWindows()[0];
+      w.webContents.send('open-tab', t);
+    }, tab);
+    try { await page.waitForSelector(target.selector, { state: target.state, timeout: 2500 }); return; } catch (_) { /* not ready yet: ask again */ }
+  }
+  const look = await page.evaluate(() => {
+    const el = document.querySelector('#island'), box = (document.querySelector('#panel') || {}).getBoundingClientRect;
+    return { island: el && el.className, page: (document.querySelector('.page.on') || {}).dataset && document.querySelector('.page.on').dataset.page, viewport: [innerWidth, innerHeight], hidden: document.hidden, focus: document.hasFocus(), panel: box ? JSON.stringify(document.querySelector('#panel').getBoundingClientRect()) : null };
+  }).catch((e) => ({ error: e.message }));
+  const host = await app.evaluate(({ BrowserWindow, screen }) => ({ windows: BrowserWindow.getAllWindows().map((w) => ({ url: w.webContents.getURL().split('/').pop(), visible: w.isVisible(), bounds: w.getBounds() })), displays: screen.getAllDisplays().map((d) => d.bounds) })).catch((e) => ({ error: e.message }));
+  throw new Error(`The notch never showed "${target.selector}" after opening the "${tab}" tab ${tries} times.\nPage: ${JSON.stringify(look)}\nApp: ${JSON.stringify(host)}`);
+}
+
+module.exports = { launchAtoll, makeProfile, executable, openTab };
