@@ -46,6 +46,39 @@ async function gtx(q, to, translate = true) {
 const splitLines = (s) => s.replace(/\r/g, '').split('\n').map((x) => x.trim());
 const isLatin = (s) => !/[^\u0000-ɏḀ-ỿ\s\d\p{P}\p{S}]/u.test(s);
 
+// Google's detected language is sometimes wrong for whole songs: Traditional Chinese lyrics come back as
+// "en" (while still being translated correctly). Atoll uses that label to hide the translation ("already in
+// your language" / "a language you understand"), so a wrong "en" silently removed the English line.
+// If the label names a Latin-script language but the lyrics are mostly another script, trust the script.
+const SCRIPTS = [
+  ['ja', /[぀-ヿㇰ-ㇿ]/gu],            // kana (any kana means Japanese, even among Han)
+  ['ko', /[ᄀ-ᇿ㄰-㆏가-힯]/gu],
+  ['zh', /[㐀-䶿一-鿿]/gu],
+  ['ru', /[Ѐ-ӿ]/gu],
+  ['ar', /[؀-ۿݐ-ݿ]/gu],
+  ['he', /[֐-׿]/gu],
+  ['th', /[฀-๿]/gu],
+  ['hi', /[ऀ-ॿ]/gu],
+  ['el', /[Ͱ-Ͽ]/gu]
+];
+const LATIN_LANGS = new Set(['en', 'id', 'ms', 'es', 'pt', 'fr', 'de', 'it', 'nl', 'sv', 'da', 'no', 'nb', 'fi', 'pl', 'cs', 'tr', 'vi', 'ro', 'hu', 'tl', 'fil', 'sw', 'ca']);
+function scriptLanguage(lines) {
+  const text = lines.join('\n');
+  const letters = (text.match(/\p{L}/gu) || []).length;
+  if (!letters) return '';
+  const count = (re) => (text.match(re) || []).length;
+  const kana = count(SCRIPTS[0][1]);
+  let best = '', most = 0;
+  for (const [lang, re] of SCRIPTS) { const n = lang === 'ja' ? kana : count(re); if (n > most) { best = lang; most = n; } }
+  if (most / letters < 0.5) return '';               // mostly Latin (or mixed): leave Google's answer alone
+  return kana ? 'ja' : best;                          // Han characters next to kana are Japanese
+}
+function fixLanguage(lang, lines) {
+  const base = String(lang || '').toLowerCase().split(/[-_]/)[0];
+  if (base && !LATIN_LANGS.has(base)) return lang;
+  return scriptLanguage(lines) || lang;
+}
+
 // lines: ["…", "…"] -> { lang, items: [{ tr, rom }] } (same length as lines)
 async function translateLines(key, lines, to = 'en', understoodLanguages = []) {
   const baseLanguage = code => String(code).toLowerCase().split(/[-_]/)[0];
@@ -61,7 +94,7 @@ async function translateLines(key, lines, to = 'en', understoodLanguages = []) {
   // Detect without asking for translated text when the user has exclusions.
   // Romanization remains available even for a language they understand.
   const detected = understood.length ? await gtx(src.join('\n'), to, false) : null;
-  const skipped = !!detected && understood.includes(baseLanguage(detected.lang));
+  const skipped = !!detected && understood.includes(baseLanguage(fixLanguage(detected.lang, src)));
   const whole = skipped ? detected : await gtx(src.join('\n'), to);
   let tr = splitLines(whole.text);
   let rom = whole.rom ? splitLines(whole.rom) : [];
@@ -81,10 +114,11 @@ async function translateLines(key, lines, to = 'en', understoodLanguages = []) {
       rom: rom[k] && !isLatin(src[k]) && rom[k].toLowerCase() !== src[k].toLowerCase() ? rom[k] : ''
     };
   });
-  const out = { lang: whole.lang, skipped, items, same: whole.lang === to || whole.lang.split('-')[0] === to.split('-')[0] };
+  const lang = fixLanguage(whole.lang, src);
+  const out = { lang, skipped, items, same: lang === to || lang.split('-')[0] === to.split('-')[0] };
   cache.set(ck, out);
   if (cache.size > 100) cache.delete(cache.keys().next().value);
   return out;
 }
 
-module.exports = { translateLines, parseGtx, CLIENTS };
+module.exports = { translateLines, parseGtx, fixLanguage, CLIENTS };

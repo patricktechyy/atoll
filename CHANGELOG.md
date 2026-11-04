@@ -5,6 +5,7 @@ Each release needs a `## <version>` section. It becomes the GitHub release notes
 ## 0.11.3 - 2026-11-04
 
 - Fix: lyric **translation and romanization** work again. Google had started refusing the request Atoll used (HTTP 429), so both stopped at once. Atoll now uses the request Google's own Chrome extension uses and falls back to the old one.
+- Fix: Traditional Chinese songs showed romanization (pinyin) but no English line. Google labels those lyrics as English, and Atoll hides translation for English songs (and for any language you ticked under "Languages I understand"). Atoll now checks the label against the lyrics' script and corrects it.
 - Mac: Atoll builds can now be signed with a stable certificate (`ATOLL_SIGN_IDENTITY` in `native/mac/build.sh`). macOS then keeps the Music/Spotify, Calendar, Screen Recording and Accessibility permissions across rebuilds and updates, instead of forgetting them each time. Builds without a certificate are unchanged (ad hoc, permissions reset on update).
 
 ## 0.11.2 - 2026-11-04
