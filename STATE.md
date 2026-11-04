@@ -21,7 +21,7 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 - The shared test suite and `win-smoke` PASSED on the GitHub Windows runner (2026-11-04). Still unverified on a real Windows laptop.
 - `npm run dist:win:dir` / `dist:win` (electron-builder): `native/win/build-helper.js` was recreated from `app/src/native.js` (`buildHelper`) and has never run. Prebuilt helpers in `native/win/prebuilt/` are used as fallback (CI does not yet require a fresh compile: `ATOLL_REQUIRE_FRESH_HELPER=0`).
 - `app/test/win-smoke.test.js` (written without a Windows machine).
-- electron-updater path: install 0.11.0, publish 0.11.1, confirm Settings → About shows it and Restart installs it. The Windows updater code path has never run.
+- electron-updater path: install `Atoll-Setup-0.11.0.exe` from the v0.11.0 release, then Settings → About → Check for updates should find 0.11.1 and Restart should install it. The release assets (`latest.yml`, installer, blockmap) exist; the Windows updater code path itself has never run on a real Windows machine.
 - Windows app after this session's shared-code changes: lyrics routing (Apple Music for Windows app id `AppleInc.AppleMusic…` must map to Apple Music), display selector, calendar settings (ICS only, Apple row hidden), About page.
 - Upgrade from the old portable folder to the installer keeps settings in `%APPDATA%\Atoll` (same `appId`/`productName`); confirm on the first real install.
 - `app/test/reminders-settings-ui.test.js` is a leftover browser-level test needing a Chrome path; not in any suite. Decide to fix or delete.
@@ -30,7 +30,7 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 
 - Real Apple Music and Spotify lyric fetching with signed-in accounts (verified once by hand at 0.10.9 for Apple Music).
 - Real Apple Calendar permission grant and real events (UI is tested with a stubbed reader; the EventKit query runs unauthorized in tests).
-- Release workflow on a real GitHub Release (asset names, `latest-mac.json`), then an in-app update from a downloaded 0.11.0 to 0.11.1.
+- DONE 2026-11-04: Release workflow produced all six assets for v0.11.0 and v0.11.1, and the installed Mac app updated itself from 0.11.0 to 0.11.1 through Settings → About (checked by the user on a real Mac).
 - CI flake: `app/test/task-time-ui.test.js` failed once on the macos-14 runner at its first click (panel control never visible) with the same code that passed the run before. Not reproduced locally. Tests now use `openTab()` in `app/test/launch.js` (re-sends the open command, waits for the control, prints page/app state on failure). If it fails again, read that printed state.
 - `native/mac/qa/qa.cjs` has failed once on the first launch of some fresh builds and passes on rerun; cause not found.
 - First CI run: Windows build, shared UI tests and Windows smoke test passed; the macOS-only step failed because the Mac QA scripts could not find Playwright (fixed: they now resolve it from `app/`). CI is now green on both OSes (run on commit f4ceb3f: unit tests, macOS build + UI + Mac tests, Windows build + UI + smoke).
