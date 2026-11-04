@@ -1,4 +1,4 @@
-const { _electron }=require(process.env.ATOLL_PLAYWRIGHT_MODULE || 'playwright');
+const { _electron }=require(process.env.ATOLL_PLAYWRIGHT_MODULE || require.resolve('playwright', { paths: [require('node:path').join(__dirname, '..', '..', '..', 'app')] }));
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 (async()=>{
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'atoll-flows-'));

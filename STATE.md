@@ -32,6 +32,7 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 - Real Apple Calendar permission grant and real events (UI is tested with a stubbed reader; the EventKit query runs unauthorized in tests).
 - Release workflow on a real GitHub Release (asset names, `latest-mac.json`), then an in-app update from a downloaded 0.11.0 to 0.11.1.
 - `native/mac/qa/qa.cjs` has failed once on the first launch of some fresh builds and passes on rerun; cause not found.
+- First CI run: Windows build, shared UI tests and Windows smoke test passed; the macOS-only step failed because the Mac QA scripts could not find Playwright (fixed: they now resolve it from `app/`). Confirm the next CI run is green.
 
 ## Open items for the user
 

@@ -1,6 +1,6 @@
 // Inspect grants and test only against a temporary Atoll window. Screen pixels
 // stay in memory; the keyboard test cancels the keystroke before pasting.
-const { _electron } = require(process.env.ATOLL_PLAYWRIGHT_MODULE || 'playwright');
+const { _electron } = require(process.env.ATOLL_PLAYWRIGHT_MODULE || require.resolve('playwright', { paths: [require('node:path').join(__dirname, '..', '..', '..', 'app')] }));
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 (async()=>{
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'atoll-privacy-qa-'));
