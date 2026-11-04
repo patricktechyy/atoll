@@ -34,8 +34,9 @@ These rules exist so a change made on either laptop, by either AI, works on both
 5. **One version, one changelog.** Bump `app/package.json` `version` only; add a `## <version>` section to `CHANGELOG.md` for anything user-visible. Releases need both (CI checks).
 6. **Keep the updater working.** Do not rename release assets (`Atoll-macOS-arm64.zip`, `latest-mac.json`, `Atoll-Setup-<version>.exe`, `latest.yml`) or change `appId`/`productName`/the GitHub owner and repo in `app/package.json` without updating `app/src/updater.js`, the workflows and `README.md` together. Changing `appId` or `productName` would orphan users' settings.
 7. **Lyrics policy.** Lyrics come only from the app that is playing (Spotify or Apple Music, the user's own signed-in account). Do not add third-party lyric sites back.
-8. **No secrets, no pushing.** Never commit tokens or personal data. Never `git push`, create releases, or touch GitHub settings yourself: the user does that in GitHub Desktop / the website.
-9. **Be honest in your final message.** Say what you ran, on which OS, and what you could not verify (usually: the other OS, real Apple Music / Windows media sessions, OS permission prompts).
+8. **Commits are the user's.** Commit as the repo's configured identity (`git config user.name` / `user.email`, the user's GitHub noreply address) so GitHub lists the user as the contributor. Never change that config, never author as an AI. An AI may be credited only with a `Co-Authored-By` trailer.
+9. **No secrets, no pushing.** Never commit tokens or personal data. Never `git push`, create releases, or touch GitHub settings yourself: the user does that in GitHub Desktop / the website.
+10. **Be honest in your final message.** Say what you ran, on which OS, and what you could not verify (usually: the other OS, real Apple Music / Windows media sessions, OS permission prompts).
 
 ## Build and test commands
 
