@@ -14,15 +14,33 @@ function parseGtx(data) {
   return { text, rom, lang };
 }
 
-async function gtx(q, to, translate = true) {
-  const url = `${ENDPOINT}?client=gtx&sl=auto&tl=${encodeURIComponent(to)}${translate ? '&dt=t' : ''}&dt=rm`;
+// Google throttles the anonymous `gtx` client hard (HTTP 429 "Sorry..." for every request, which
+// broke translation and romanization at once). The `dict-chrome-ex` client (the Chrome dictionary
+// extension's) answers with the identical format and is not throttled the same way. Try it first;
+// fall back to `gtx` if it is refused. Whichever works last is remembered for the next call.
+const CLIENTS = ['dict-chrome-ex', 'gtx'];
+
+async function gtxOnce(client, q, to, translate) {
+  const url = `${ENDPOINT}?client=${client}&sl=auto&tl=${encodeURIComponent(to)}${translate ? '&dt=t' : ''}&dt=rm`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8', 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Atoll/0.3' },
+    headers: { 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8', 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' },
     body: 'q=' + encodeURIComponent(q)
   });
   if (!res.ok) throw new Error(`Translate returned ${res.status}`);
   return parseGtx(await res.json());
+}
+
+async function gtx(q, to, translate = true) {
+  let lastError;
+  for (const client of [...CLIENTS]) {
+    try {
+      const out = await gtxOnce(client, q, to, translate);
+      if (CLIENTS[0] !== client) { CLIENTS.splice(CLIENTS.indexOf(client), 1); CLIENTS.unshift(client); }
+      return out;
+    } catch (error) { lastError = error; }
+  }
+  throw lastError;
 }
 
 const splitLines = (s) => s.replace(/\r/g, '').split('\n').map((x) => x.trim());
@@ -69,4 +87,4 @@ async function translateLines(key, lines, to = 'en', understoodLanguages = []) {
   return out;
 }
 
-module.exports = { translateLines, parseGtx };
+module.exports = { translateLines, parseGtx, CLIENTS };

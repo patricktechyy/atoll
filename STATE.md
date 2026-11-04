@@ -2,7 +2,13 @@
 
 Rewritten at the end of every session. Read it first; clear items from "Needs verifying" when you verify them.
 
-**Last updated:** 2026-11-04, macOS (Claude Sonnet 5.5). Version in the repo: 0.11.2 (0.11.0 and 0.11.1 released; 0.11.2 adds Fix permission and is not released yet).
+**Last updated:** 2026-11-04, macOS (Claude Sonnet 5.5). Version in the repo: 0.11.3 (0.11.0 and 0.11.1 released; 0.11.2 and 0.11.3 are not released yet).
+
+## Latest session: translation + romanization broken, Apple Music permission keeps dropping (0.11.3)
+
+- Translate/romanization: `translate.googleapis.com` answered HTTP 429 ("Sorry...") to `client=gtx` for every request, so both failed. `app/src/translate.js` now tries `client=dict-chrome-ex` (same response format, not throttled) then `gtx`, remembering the one that worked. Test: `app/test/translate-fallback.test.js`. Checked against the live endpoint with ja/ko/zh text (translation + romanization returned). NOT checked: the packaged app showing translated lyrics on screen, and whether Google throttles `dict-chrome-ex` later (it is unofficial; if it breaks again expect 429 again).
+- Permission loss: confirmed from `log show` (tccd) that the Automation grant is stored under `app.atoll.notch` and was deleted/recreated several times today; the ad hoc build's designated requirement is its cdhash (`designated => cdhash H"…"`), which changes on every build/update. `native/mac/build.sh` now signs with `ATOLL_SIGN_IDENTITY` when set; the requirement then becomes identifier + certificate. Verified: two separate builds signed with the user's Apple Development certificate have the identical requirement and each satisfies the other's. NOT verified: that macOS keeps the grant across such builds in practice (needs a human to grant once, rebuild, check), and the CI/Release builds are still ad hoc (the certificate is in the user's keychain only), so in-app updates to a CI build go back to hash-based identity.
+
 
 ## Latest session: Mac "Fix permission" (0.11.2)
 

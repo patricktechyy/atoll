@@ -2,6 +2,11 @@
 
 Each release needs a `## <version>` section. It becomes the GitHub release notes and the in-app "What's new".
 
+## 0.11.3 - 2026-11-04
+
+- Fix: lyric **translation and romanization** work again. Google had started refusing the request Atoll used (HTTP 429), so both stopped at once. Atoll now uses the request Google's own Chrome extension uses and falls back to the old one.
+- Mac: Atoll builds can now be signed with a stable certificate (`ATOLL_SIGN_IDENTITY` in `native/mac/build.sh`). macOS then keeps the Music/Spotify, Calendar, Screen Recording and Accessibility permissions across rebuilds and updates, instead of forgetting them each time. Builds without a certificate are unchanged (ad hoc, permissions reset on update).
+
 ## 0.11.2 - 2026-11-04
 
 - Mac: new **Fix permission** buttons. After an Atoll update macOS can keep showing Atoll as allowed (Calendar, Screen Recording, Accessibility, Automation for Music and Spotify) while refusing the new version, and asking again shows no prompt. Fix permission clears Atoll's own saved answer in macOS (nothing else) and asks again. Find it in Settings → System → Mac permissions, and next to Connect in Settings → Calendar when access is missing.

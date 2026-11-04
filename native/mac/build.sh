@@ -1,7 +1,13 @@
 #!/bin/bash
-# Build a local arm64 Atoll.app from the official Electron distribution (ad hoc signed).
+# Build a local arm64 Atoll.app from the official Electron distribution.
 #
 #   bash native/mac/build.sh <output Atoll.app> [electron-vX.Y.Z-darwin-arm64.zip]
+#
+# Signing: ad hoc by default. An ad hoc app's only identity is its code hash, which changes with every build,
+# so macOS drops the Automation (Music/Spotify), Calendar, Screen Recording and Accessibility permissions after
+# each rebuild or update. To keep them, sign every build with the same certificate:
+#   ATOLL_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" bash native/mac/build.sh ...
+# (list yours with: security find-identity -v -p codesigning). The permission then follows the certificate, not the hash.
 #
 # The output must not exist yet. Without a zip argument the matching Electron runtime is downloaded
 # (or taken from ELECTRON_ZIP) and checked against the SHA-256 pinned in native/mac/electron-<version>.sha256.
@@ -13,6 +19,10 @@ app="$root/app"
 target="${1:?Usage: build.sh <output Atoll.app> [electron zip]}"
 case "$target" in /*) ;; *) target="$PWD/$target" ;; esac
 archive="${2:-${ELECTRON_ZIP:-}}"
+sign_id="${ATOLL_SIGN_IDENTITY:--}"
+sign() {
+  if [ "$sign_id" = "-" ]; then codesign --force --sign - "$@"; else codesign --force --timestamp=none --sign "$sign_id" "$@"; fi
+}
 test ! -e "$target" || { echo "Output already exists: $target" >&2; exit 1; }
 
 electron="$(node -p "require(process.argv[1]).devDependencies.electron" "$app/package.json")"
@@ -43,7 +53,7 @@ cp "$root/LICENSE" "$res/Atoll-LICENSE"
 clang -arch arm64 -mmacosx-version-min=13.0 -O2 -fobjc-arc -framework AppKit -framework ApplicationServices -framework ImageIO -framework AudioToolbox -framework CoreAudio -framework Carbon "$here/helper.m" -o "$res/helper/atoll-mac"
 headers="${NODE_INCLUDE_DIR:-$(node -p "require('path').resolve(process.execPath, '../../include/node')")}"
 clang -arch arm64 -mmacosx-version-min=13.0 -O2 -bundle -undefined dynamic_lookup -I"$headers" -fobjc-arc -framework AppKit -framework EventKit -framework CoreGraphics "$here/platform.m" -o "$res/helper/platform.node"
-codesign --force --sign - "$res/helper/platform.node"
+sign "$res/helper/platform.node"
 mv "$bundle/MacOS/Electron" "$bundle/MacOS/Atoll"
 plist="$bundle/Info.plist"
 for key in CFBundleName CFBundleDisplayName CFBundleExecutable; do plutil -replace "$key" -string Atoll "$plist"; done
@@ -56,12 +66,15 @@ plutil -replace NSAppleEventsUsageDescription -string 'Atoll reads playback posi
 plutil -replace NSCalendarsFullAccessUsageDescription -string 'Atoll reads your calendar events to show your agenda and meeting reminders.' "$plist"
 plutil -replace NSCalendarsUsageDescription -string 'Atoll reads your calendar events to show your agenda and meeting reminders.' "$plist"
 sips -s format icns "$app/assets/icon.png" --out "$res/electron.icns" >/dev/null
-codesign --force --sign - "$res/helper/atoll-mac"
-for framework in "$bundle"/Frameworks/*.framework; do codesign --force --sign - "$framework"; done
-for helper in "$bundle"/Frameworks/*.app; do codesign --force --sign - "$helper"; done
-codesign --force --sign - "$stage/Electron.app"
+sign "$res/helper/atoll-mac"
+for framework in "$bundle"/Frameworks/*.framework; do sign "$framework"; done
+for helper in "$bundle"/Frameworks/*.app; do sign "$helper"; done
+sign "$stage/Electron.app"
 codesign --verify --deep --strict "$stage/Electron.app"
+if [ "$sign_id" != "-" ]; then
+  codesign -d -r- "$stage/Electron.app" 2>&1 | grep -q 'certificate' || { echo "Signed with $sign_id but the designated requirement is not certificate-based; permissions would not persist." >&2; exit 1; }
+fi
 mkdir -p "$(dirname "$target")"
 mv "$stage/Electron.app" "$target"
 touch "$target"
-echo "Built $target ($version)"
+echo "Built $target ($version), signed: $([ "$sign_id" = "-" ] && echo "ad hoc (permissions reset on every build)" || echo "$sign_id")"
