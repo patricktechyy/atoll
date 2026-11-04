@@ -2,7 +2,14 @@
 
 Rewritten at the end of every session. Read it first; clear items from "Needs verifying" when you verify them.
 
-**Last updated:** 2026-11-04, macOS (Claude Sonnet 5.5). Version in the repo: 0.11.3 (0.11.0 and 0.11.1 released; 0.11.2 and 0.11.3 are not released yet).
+**Last updated:** 2026-11-04, macOS (Claude Sonnet 5.5). Version in the repo: 0.11.4 (0.11.0 and 0.11.1 released; 0.11.2–0.11.4 are not released yet).
+
+## Latest session: notch says "not playing" after changing song in Apple Music (0.11.4)
+
+- Cause (reproduced): `native/mac/helper.m` put a player on a flat 60 s cooldown after ANY failed poll. Freezing Music for 4 s (`kill -STOP`) made one poll time out (-1712); the old helper then reported `active:false` and was still blind 30+ s later. Restarting the app or Fix permission restarts the helper, which is why those "fixed" it. A song change in Music (streamed tracks especially) can stall it like that.
+- Fix: error-classified cooldown (1.5 s for timeouts/no track, 5 s not running, 30 s only for -1743/-1744 permission refusals), a failed script is dropped from the cache, the last good sample is held up to 8 s instead of emitting "not playing", the cover-art script now has a 3 s timeout (it had the 120 s default on the poll thread), repeated identical diag messages are rate-limited and now carry the error number.
+- Verified on macOS: same freeze test on the patched helper → zero `active:false`, song reported again ~1 s after Music resumed (old helper: 60 s blackout). NOT verified: the exact trigger on the user's Mac (a manual song change in the real app, which I could not reproduce with skips or auto-advance), a stall longer than 8 s, and an automated test (the freeze test needs a live Music and is invasive, so it is not in CI).
+
 
 ## Latest session: translation + romanization broken, Apple Music permission keeps dropping (0.11.3)
 

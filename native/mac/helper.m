@@ -17,22 +17,40 @@ static void emit(NSDictionary *event) {
 static NSString *player;
 static BOOL netEnabled, bannersEnabled;
 static NSMutableDictionary *scripts, *cooldowns;
+static NSInteger lastErrorNumber;
 static NSAppleEventDescriptor *run(NSString *source) {
     NSAppleScript *script = scripts[source];
     if (!script) { script = [[NSAppleScript alloc] initWithSource:source]; if (scripts.count < 16) scripts[source] = script; }
-    NSDictionary *error;
+    NSDictionary *error = nil;
     NSAppleEventDescriptor *result = [script executeAndReturnError:&error];
-    if (!result && error) emit(@{@"type":@"diag", @"msg":error[NSAppleScriptErrorMessage] ?: @"Automation unavailable"});
+    lastErrorNumber = result ? 0 : [error[NSAppleScriptErrorNumber] integerValue];
+    if (!result) {
+        // never reuse a script that failed: the next attempt starts from a fresh one
+        [scripts removeObjectForKey:source];
+        NSString *msg = [NSString stringWithFormat:@"%@ (%ld)", error[NSAppleScriptErrorMessage] ?: @"Automation unavailable", (long)lastErrorNumber];
+        static NSString *lastMsg; static NSDate *lastMsgAt;
+        if (![msg isEqual:lastMsg] || [lastMsgAt timeIntervalSinceNow] < -30) { emit(@{@"type":@"diag", @"msg":msg}); lastMsg = msg; lastMsgAt = [NSDate date]; }
+    }
     return result;
+}
+// How long to leave a player alone after a failed poll. Only a refused permission deserves a long pause (asking
+// again cannot succeed and just spams macOS); a timeout or a missing track is Music being busy, e.g. loading the
+// next song, and must be retried almost at once or the notch says "not playing" until the cooldown ends.
+static NSTimeInterval cooldownFor(NSInteger code) {
+    if (code == -1743 || code == -1744) return 30;   // not authorized / user consent required
+    if (code == -600 || code == -609 || code == -10810) return 5;  // not running / connection invalid / launch failed
+    return 1.5;                                       // timeout (-1712), no current track (-1728), anything else
 }
 static void media(void) {
     NSDictionary *chosen = nil;
+    BOOL failed = NO;
+    static NSDictionary *lastGood; static NSDate *lastGoodAt;
     for (NSString *identifier in @[@"com.apple.Music", @"com.spotify.client"]) {
-        if (![NSRunningApplication runningApplicationsWithBundleIdentifier:identifier].count ||
-            [cooldowns[identifier] timeIntervalSinceNow] > 0) continue;
+        if (![NSRunningApplication runningApplicationsWithBundleIdentifier:identifier].count) continue;
+        if ([cooldowns[identifier] timeIntervalSinceNow] > 0) { failed = YES; continue; }  // waiting to retry: not "nothing playing"
         NSString *source = [NSString stringWithFormat:@"with timeout of 2 seconds\ntell application id \"%@\"\nif player state is stopped then return {}\nset t to current track\nreturn {name of t, artist of t, album of t, duration of t, player position, player state is playing}\nend tell\nend timeout", identifier];
         NSAppleEventDescriptor *r = run(source);
-        if (!r) { cooldowns[identifier] = [NSDate dateWithTimeIntervalSinceNow:60]; continue; }
+        if (!r) { cooldowns[identifier] = [NSDate dateWithTimeIntervalSinceNow:cooldownFor(lastErrorNumber)]; failed = YES; continue; }
         if (r.numberOfItems != 6) continue;
         NSString *title = [r descriptorAtIndex:1].stringValue ?: @"";
         NSString *artist = [r descriptorAtIndex:2].stringValue ?: @"";
@@ -41,6 +59,10 @@ static void media(void) {
         if (!chosen || playing || [identifier isEqual:player]) chosen = @{@"type":@"media", @"active":@YES, @"title":title, @"artist":artist, @"album":[r descriptorAtIndex:3].stringValue ?: @"", @"duration":@(duration), @"position":@([r descriptorAtIndex:5].doubleValue), @"playing":@(playing), @"canSeek":@YES, @"app":identifier, @"key":[@[identifier,artist,title] componentsJoinedByString:@"|"], @"posSource":@"app"};
         if (playing) break;
     }
+    // A failed poll (Music busy for a moment) must not look like "nothing is playing": keep the last good sample
+    // for a few seconds. Nothing is emitted, so the app keeps extrapolating the position while it plays.
+    if (!chosen && failed && lastGood && [lastGoodAt timeIntervalSinceNow] > -8) return;
+    if (chosen) { lastGood = chosen; lastGoodAt = [NSDate date]; } else { lastGood = nil; }
     player = chosen[@"app"];
     static NSDictionary *lastMedia;
     NSDictionary *sample = chosen ?: @{@"type":@"media", @"active":@NO};
@@ -48,7 +70,7 @@ static void media(void) {
     if (chosen && ![chosen[@"key"] isEqual:lastMedia[@"key"]]) {
         NSData *cover = nil;
         if ([player isEqual:@"com.apple.Music"]) {
-            cover = run(@"tell application id \"com.apple.Music\" to get raw data of artwork 1 of current track").data;
+            cover = run(@"with timeout of 3 seconds\ntell application id \"com.apple.Music\" to get raw data of artwork 1 of current track\nend timeout").data;
         }
         NSString *url = nil;
         CGImageSourceRef source = cover.length ? CGImageSourceCreateWithData((__bridge CFDataRef)cover,NULL) : NULL;

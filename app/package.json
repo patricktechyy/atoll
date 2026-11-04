@@ -1,7 +1,7 @@
 {
   "name": "atoll",
   "productName": "Atoll",
-  "version": "0.11.3",
+  "version": "0.11.4",
   "description": "A living Dynamic Island for Windows and macOS: music, lyrics, focus, calendar, notifications and system stats in your notch.",
   "main": "main.js",
   "license": "MIT",

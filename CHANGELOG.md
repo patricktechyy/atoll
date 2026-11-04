@@ -2,6 +2,10 @@
 
 Each release needs a `## <version>` section. It becomes the GitHub release notes and the in-app "What's new".
 
+## 0.11.4 - 2026-11-04
+
+- Mac: fixed the notch saying "not playing" after you change song in Apple Music, until you restarted Atoll or used Fix permission. Music can answer slowly while it loads the next song; one slow answer used to switch detection off for 60 seconds. Atoll now retries within about a second and, meanwhile, keeps showing the current song instead of "not playing". Only a refused permission still waits longer. Loading the cover art also can no longer freeze detection.
+
 ## 0.11.3 - 2026-11-04
 
 - Fix: lyric **translation and romanization** work again. Google had started refusing the request Atoll used (HTTP 429), so both stopped at once. Atoll now uses the request Google's own Chrome extension uses and falls back to the old one.
