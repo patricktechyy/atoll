@@ -2,7 +2,7 @@
 // API key). It's unofficial, so it can rate limit or block a network outright; we translate a whole song
 // in one request and cache it.
 // Romanization is LOCAL first (./romanize: Korean, kana, Cyrillic, Greek). Google's romanization is only
-// requested for lines the local rules cannot read (kanji, Chinese, Thai, Arabic…), and a Google failure
+// requested for lines the local rules cannot read (kanji, Thai, Arabic…), and a Google failure
 // never removes the local romanization.
 // In the Rust host there is no require(): the build exposes romanize.js as window.AtollPure.romanizeLine.
 const romanizeLine = typeof require === 'function' ? require('./romanize').romanizeLine : window.AtollPure.romanizeLine;
@@ -105,7 +105,8 @@ async function translateLines(key, lines, to = 'en', understoodLanguages = []) {
   if (!src.length) return { lang: '', items, same: true };
 
   // Local romanization: string when the rules can read the line, null when they cannot (e.g. kanji).
-  const local = src.map((s) => (isLatin(s) ? '' : romanizeLine(s)));
+  const guess = scriptLanguage(src);                       // 'ja' decides whether Han means kanji or hanzi
+  const local = src.map((s) => (isLatin(s) ? '' : romanizeLine(s, { lang: guess })));
   const needRemoteRom = src.some((s, i) => !isLatin(s) && local[i] === null);
   const hasLocalRom = local.some((r) => r);
 

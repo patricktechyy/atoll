@@ -30,6 +30,15 @@ assert.equal(romanizeLine('Ελληνικά τραγούδι'), 'Ellinika tragou
 // Latin text passes through; anything that needs a dictionary is declined so another source can handle it
 assert.equal(romanizeLine('Hello there'), 'Hello there');
 assert.equal(romanizeLine('愛してる'), null, 'kanji need a dictionary');
-assert.equal(romanizeLine('你好'), null);
+assert.equal(romanizeLine('愛してる', { lang: 'ja' }), null, 'kanji next to kana are Japanese: no pinyin');
+assert.equal(romanizeLine('愛', { lang: 'ja' }), null, 'Han in a Japanese song are kanji');
+assert.equal(romanizeLine('사랑해 愛'), null, 'hanja inside Korean are not read as pinyin');
+
+// Chinese: pinyin with tone marks, phrase-aware for polyphones
+assert.equal(romanizeLine('你好'), 'Nǐ hǎo');
+assert.equal(romanizeLine('我爱你，中国', { lang: 'zh' }), 'Wǒ ài nǐ，zhōng guó');
+assert.equal(romanizeLine('也不是真的不會想你'), 'Yě bú shì zhēn de bú huì xiǎng nǐ', 'Traditional characters');
+assert.equal(romanizeLine('银行行长'), 'Yín háng háng zhǎng', 'polyphones follow the phrase');
+assert.equal(romanizeLine('I love 你'), 'I love nǐ');
 assert.equal(romanizeLine('สวัสดี'), null);
 console.log('Local romanization passed.');

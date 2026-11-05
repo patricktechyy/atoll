@@ -9,7 +9,12 @@
 //            that contains kanji returns null and the caller may use another source.
 //   Russian / Ukrainian (Cyrillic) and Greek, in simple BGN/PCGN-style Latin.
 //
-// romanizeLine(text) -> string, or null when the line has letters this module cannot romanize.
+//   Chinese  Hanzi -> pinyin with tone marks via the vendored pinyin-pro (MIT, ./vendor), phrase-aware for
+//            polyphones. Used when the song is not Japanese: Han next to kana (or in a Japanese song) are
+//            kanji, whose readings need a Japanese dictionary, so those lines return null.
+//
+// romanizeLine(text, { lang }) -> string, or null when the line has letters this module cannot romanize.
+// `lang` is the song's script language ('ja', 'zh', 'ko', …); it only matters for Han characters.
 
 const isLatinOnly = (s) => !/[^\u0000-ɏḀ-ỿ\s\d\p{P}\p{S}]/u.test(s);
 
@@ -169,16 +174,30 @@ function greek(s) {
   });
 }
 
+// ---------------------------------------------------------------- Chinese (pinyin)
+// In the Rust frontend there is no require(): prepare-rust publishes the library as window.AtollPure.pinyinPro.
+const pinyinLib = () => (typeof require === 'function' ? require('./vendor/pinyin-pro') : (typeof window !== 'undefined' && window.AtollPure && window.AtollPure.pinyinPro));
+const HAN = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF々〇]+/g;
+function chinese(s) {
+  const lib = pinyinLib();
+  if (!lib) return s;
+  return s.replace(HAN, (run) => lib.pinyin(run, { type: 'array', toneType: 'symbol' }).join(' '));
+}
+
 // ---------------------------------------------------------------- entry point
-function romanizeLine(text) {
+function romanizeLine(text, opts = {}) {
   const s = String(text == null ? '' : text).normalize('NFC');
   if (isLatinOnly(s)) return s;
   let out = s;
+  // Han with no Hangul/kana around it and a non-Japanese song: Chinese. (Hanja inside Korean and kanji inside
+  // Japanese keep their Han characters here, so the line is declined below.)
+  const chineseText = !/[가-힣\u3041-\u3096\u30A1-\u30FA]/.test(out) && opts.lang !== 'ja';
   if (/[가-힣]/.test(out)) out = korean(out);
   if (IS_KANA.test(out)) out = kana(out);
   if (/[Ѐ-ӿ]/.test(out)) out = cyrillic(out);
   if (/[Ͱ-Ͽἀ-῿]/.test(out)) out = greek(out);
-  if (!isLatinOnly(out)) return null;          // kanji, hanja, Thai, Arabic…: needs a dictionary
+  if (chineseText) out = chinese(out);
+  if (!isLatinOnly(out)) return null;         // kanji, hanja, Thai, Arabic…: needs a dictionary
   return out.replace(/^(\P{L}*)(\p{Ll})/u, (_, lead, ch) => lead + ch.toUpperCase());
 }
 

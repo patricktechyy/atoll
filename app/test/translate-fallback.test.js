@@ -3,29 +3,29 @@
 const assert = require('node:assert/strict');
 const { translateLines, fixLanguage, CLIENTS, resetRateLimit } = require('../src/translate');
 
-// 你好 has Han only, so Google's romanization is still needed for it (local rules cover kana/Hangul/Cyrillic/Greek)
-const answer = (client) => ({ ok: true, json: async () => [[['Hello', '你好'], [null, null, null, 'Nǐ hǎo']], null, 'zh-CN'] });
+// 愛してる has kanji, so Google's romanization is still needed for it (local rules cover kana, Hangul, Chinese, Cyrillic, Greek)
+const answer = (client) => ({ ok: true, json: async () => [[['I love you', '愛してる'], [null, null, null, 'Aishiteru']], null, 'ja'] });
 const refused = { ok: false, status: 429 };
 
 (async () => {
   let seen = [];
   global.fetch = async (url) => { const c = new URL(url).searchParams.get('client'); seen.push(c); return answer(c); };
-  const first = await translateLines('song-1', ['你好'], 'en', []);
+  const first = await translateLines('song-1', ['愛してる'], 'en', []);
   assert.deepEqual(seen, ['dict-chrome-ex'], 'the unthrottled client is tried first');
-  assert.equal(first.items[0].tr, 'Hello');
-  assert.equal(first.items[0].rom, 'Nǐ hǎo', 'Google romanization is used for lines the local rules cannot read');
+  assert.equal(first.items[0].tr, 'I love you');
+  assert.equal(first.items[0].rom, 'Aishiteru', 'Google romanization is used for lines the local rules cannot read');
 
   // dict-chrome-ex refused -> gtx is used, and is then remembered as the first choice
   seen = [];
   global.fetch = async (url) => { const c = new URL(url).searchParams.get('client'); seen.push(c); return c === 'dict-chrome-ex' ? refused : answer(c); };
-  const second = await translateLines('song-2', ['你好'], 'en', []);
+  const second = await translateLines('song-2', ['愛してる'], 'en', []);
   assert.deepEqual(seen, ['dict-chrome-ex', 'gtx']);
-  assert.equal(second.items[0].tr, 'Hello');
+  assert.equal(second.items[0].tr, 'I love you');
   assert.equal(CLIENTS[0], 'gtx');
 
   // both refused -> the error reaches the caller instead of silently returning nothing
   global.fetch = async () => refused;
-  await assert.rejects(() => translateLines('song-3', ['你好'], 'en', []), /429/);
+  await assert.rejects(() => translateLines('song-3', ['愛してる'], 'en', []), /429/);
   console.log('Translate client fallback passed.');
 
   // Blocked network: Google keeps refusing. Local romanization must survive, the failure is flagged, and we
@@ -47,6 +47,10 @@ const refused = { ok: false, status: 429 };
   assert.equal(jp.items[0].rom, 'Arigatou');
   // kanji can't be read locally: with Google blocked there is nothing to show, and the error surfaces
   await assert.rejects(() => translateLines('blocked-kanji', ['愛してる'], 'en', []), /429/);
+  // Chinese is read locally, so a blocked Google still leaves pinyin
+  const cn = await translateLines('blocked-zh', ['我爱你'], 'en', []);
+  assert.equal(cn.partial, true);
+  assert.equal(cn.items[0].rom, 'Wǒ ài nǐ');
   // local romanization means no romanization request goes to Google for Korean
   resetRateLimit();
   const wanted = [];
@@ -72,7 +76,7 @@ const refused = { ok: false, status: 429 };
     assert.equal(r.skipped, false, 'a Chinese song is not "a language you understand" because Google said en');
     assert.equal(r.same, false, 'a Chinese song is not already in English');
     assert.equal(r.items[0].tr, 'It is not that I do not miss you');
-    assert.equal(r.items[0].rom, 'Yě bùshì');
+    assert.equal(r.items[0].rom, 'Yě bú shì zhēn de bú huì xiǎng nǐ', 'Chinese is romanized locally (pinyin), not by Google');
   }
 
   // the override only fires when the script disagrees with a Latin-language label

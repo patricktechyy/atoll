@@ -14,5 +14,6 @@ for(const pkg of metadata.packages){
  packages.push(`${pkg.name} ${pkg.version} — ${pkg.license||'see notice'}${pkg.repository?' — '+pkg.repository:''}\nNotices: ${refs.join(', ')||'license identifier above'}`);
 }
 const out=path.join(root,'.cache/rust-notices.txt');
-fs.writeFileSync(out,'Atoll\n'+fs.readFileSync(path.join(root,'LICENSE'),'utf8')+'\n\nDependency licenses\n\n'+packages.join('\n\n')+'\n\n'+[...texts.values()].map(v=>`Notice ${v.number}\n${'='.repeat(60)}\n${v.text}`).join('\n\n'));
+const vendorDir=path.join(root,'app/src/vendor'),vendorNotice=fs.readdirSync(vendorDir).filter(n=>n.endsWith('.LICENSE')).map(n=>`\n\nBundled JavaScript: ${n.replace('.LICENSE','')}\n${'='.repeat(60)}\n${fs.readFileSync(path.join(vendorDir,n),'utf8')}`).join('');
+fs.writeFileSync(out,'Atoll\n'+fs.readFileSync(path.join(root,'LICENSE'),'utf8')+'\n\nDependency licenses\n\n'+packages.join('\n\n')+'\n\n'+[...texts.values()].map(v=>`Notice ${v.number}\n${'='.repeat(60)}\n${v.text}`).join('\n\n')+vendorNotice);
 console.log('Prepared Rust dependency notices');
