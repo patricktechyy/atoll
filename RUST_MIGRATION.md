@@ -1,6 +1,6 @@
 # Rust migration
 
-The 0.12.0 source adds a Rust/Tauri host for **Windows and macOS**. It keeps the existing HTML/CSS/JavaScript interface; it is not a rewrite of the UI in Rust. Windows uses WebView2 and macOS uses WKWebView. Electron and Node.js are build/test dependencies only, absent from the Rust application bundle.
+Version 0.12.0 introduced a Rust/Tauri host for **Windows and macOS**. It keeps the existing HTML/CSS/JavaScript interface; it is not a rewrite of the UI in Rust. Windows uses WebView2 and macOS uses WKWebView. Electron and Node.js are build/test dependencies only, absent from the Rust application bundle.
 
 The migration is a release candidate, **not a claim of verified full parity**. See `STATE.md` for actual checks. Keep the Electron fallback until both OS builds, real account sessions, privacy permissions and installer/update transitions pass. No platform has been excluded from the migration.
 
@@ -60,7 +60,7 @@ The Windows NSIS hook also backs up the profile before removing the legacy Elect
 ## Verification still required
 
 - Real Windows compile, packaged WebView2 tests, notifications, helper fallbacks, file icons, clipboard/paste, screenshots, mixed-DPI monitors and autostart. Cross-compiling from this Mac stopped at the missing Windows SDK; that is not Windows verification.
-- Real signed-in Apple Music/Spotify lyrics and controls, account refresh/popups/disconnect and Todolist CRUD on each OS.
+- The installed Mac 0.12.1 app now successfully displays the reported “HAHAHA” lyrics through the real Apple Music account. Still verify Windows Apple Music and both-platform Spotify, other player/control scenarios, account refresh/popups/disconnect and Todolist CRUD.
 - Actual Mac privacy prompts and persistence of grants, EventKit event selection and screen capture on a permission-granted build; native dragging and Spaces/fullscreen transitions.
 - End-to-end installer migration and consecutive-version update/relaunch on each OS. The automated Rust updater fixture tests failure/recovery without installing.
 - The Electron software-rendering switch has a WebView2 implementation on Windows. The [public WKPreferences API](https://developer.apple.com/documentation/webkit/wkpreferences) exposes no equivalent GPU-off switch: the Rust Mac UI must explain system-managed graphics rather than pretend the preference is applied. This remains a migration behavior difference to review; the Electron fallback retains the old control.

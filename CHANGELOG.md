@@ -2,6 +2,10 @@
 
 Each release needs a `## <version>` section. It becomes the GitHub release notes and the in-app "What's new".
 
+## 0.12.1 - 2026-11-05
+
+- Fixed Apple Music lyrics incorrectly reporting that a song has no lyrics after the Rust migration, on both Windows and macOS. The account storefront request now sends the same authenticated player headers as search and lyrics, refreshes expired sessions, and reports lookup failures instead of silently searching MusicKit's fallback US catalog. Verified the reported “HAHAHA” by Juicy Luicy against the connected account's Indonesian storefront.
+
 ## 0.12.0 - 2026-11-05
 
 - Added a Rust/Tauri desktop host for Windows and macOS using the existing shared interface. The packaged Rust app uses WebView2 on Windows and WKWebView on macOS, without bundling Electron or Node.js. Retains the 95-method renderer contract, native media helpers, integrated MacBook notch, calendars, clipboard, screenshots, tasks, focus, water, notifications, shortcuts and tray controls.

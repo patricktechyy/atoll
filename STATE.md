@@ -2,7 +2,16 @@
 
 Rewritten at the end of every session. Read it first; clear items from "Needs verifying" when you verify them.
 
-**Last updated:** 2026-11-05, macOS arm64 (Codex). Source version: **0.12.0 Rust migration candidate**, local only. No push or release. Installed `/Applications/Atoll.app` is now **0.12.0 Rust/Tauri**, replaced at the user's explicit request on 2026-11-05. Latest fetched tag remains v0.11.4.
+**Last updated:** 2026-11-05, macOS arm64 (Codex). Source version: **0.12.1 Rust migration candidate**, local only. No push or release. Installed `/Applications/Atoll.app` is now **0.12.1 Rust/Tauri**, updated with the verified lyric fix on 2026-11-05. Latest fetched tag remains v0.11.4.
+
+## Latest session: Apple Music lyrics regression fixed (0.12.1)
+
+- Reproduced the reported “HAHAHA” by Juicy Luicy failure in the installed 0.12.0 UI and through the live account API. The Rust `/v1/me/storefront` request omitted the web player's Origin/Referer headers. Apple returned HTTP 401; the code silently kept MusicKit's `us` fallback. The US catalog search found the song, but its lyrics returned HTTP 404. The same connected account resolves to `id`; that storefront returned HTTP 200 with timed TTML for the song.
+- Added a single authenticated Apple request builder used for storefront, search and lyrics on both Windows and macOS. Storefront requests now use the same authentication-refresh retry as catalog requests. A failed, empty or malformed storefront lookup returns a retryable error instead of using the stale fallback and incorrectly reporting no lyrics. Existing credentials are retained and the resolved storefront is remembered. Lyrics still come exclusively from the playing app's own service/account.
+- Verification on macOS: new header regression failed before the fix (Origin was absent), then passed. Normal Rust suite: 9 passed, 1 live-account test intentionally ignored; explicitly ran that opt-in live test and verified the native Rust HTTP client retrieves 30 timed lyric paragraphs for the reported song using the real account. No credential or lyric text was logged by that test. `npm test`, Cargo fmt, and clippy across all targets with warnings denied passed. The signed 0.12.1 package passed the existing real WKWebView harness on the current camera-free display; this run did not exercise a physical camera notch. Shared renderer/Electron source was unchanged, so no Electron UI rebuild was required for this network-only fix.
+- Installed the source-built, certificate-signed 0.12.1 app after a graceful quit, keeping the previous 0.12.0 app and full profile at `../Backups/Atoll-0.12.0-before-0.12.1-20261105-222504/`. Signature verification passed. Launched the installed app and opened its music panel through native UI automation: **the same “HAHAHA” track now visibly displays its lyrics**, replacing the prior no-lyrics message. Playback was not changed; no reconnection or permission reset was needed.
+- Verification on Windows: no Windows build/runtime test was run. The fix is shared Rust networking code with no OS-specific branch; the existing Windows migration/verification items remain outstanding. Live Spotify, Apple session refresh/popups/disconnect, installer transitions and all other unresolved migration checks below remain pending.
+- Version/changelog updated to 0.12.1, matching local zip/feed assets regenerated. Changes committed locally without a push or release.
 
 ## Installation follow-up: Rust candidate installed on this Mac
 

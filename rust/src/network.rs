@@ -168,6 +168,54 @@ async fn player_tokens(app: &AppHandle, name: &str, refresh: bool) -> Result<Val
     }
     Err(format!("Reconnect {name} in Settings → Music & Lyrics"))
 }
+// Apple's account storefront requires the web player's Origin just like catalog/lyrics requests.
+// Keep one request builder so those endpoints cannot silently drift apart.
+fn apple_request(client: &reqwest::Client, url: &str, tokens: &Value) -> reqwest::RequestBuilder {
+    client
+        .get(url)
+        .bearer_auth(text(tokens, "dev"))
+        .header("Media-User-Token", text(tokens, "user"))
+        .header("Origin", "https://music.apple.com")
+        .header("Referer", "https://music.apple.com/")
+}
+fn storefront_id(data: &Value) -> Result<String, String> {
+    let id = data["data"][0]["id"].as_str().unwrap_or("");
+    if id.is_empty() || id.len() > 16 || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+    {
+        return Err("Apple Music did not return the account storefront. Try again or reconnect Apple Music.".into());
+    }
+    Ok(id.to_string())
+}
+async fn player_response(
+    app: &AppHandle,
+    name: &str,
+    target: &str,
+    tokens: &mut Value,
+) -> Result<reqwest::Response, String> {
+    let state = app.state::<State>();
+    for attempt in 0..2 {
+        let request = if name == "apple" {
+            apple_request(&state.client, target, tokens)
+        } else {
+            let mut request = state
+                .client
+                .get(target)
+                .bearer_auth(text(tokens, "token"))
+                .header("app-platform", "WebPlayer");
+            if !text(tokens, "clientToken").is_empty() {
+                request = request.header("client-token", text(tokens, "clientToken"));
+            }
+            request
+        };
+        let response = request.send().await.map_err(|e| e.to_string())?;
+        if matches!(response.status().as_u16(), 401 | 403) && attempt == 0 {
+            *tokens = player_tokens(app, name, true).await?;
+            continue;
+        }
+        return Ok(response);
+    }
+    Err("The player session expired".into())
+}
 pub async fn player(
     app: &AppHandle,
     name: &str,
@@ -200,24 +248,21 @@ pub async fn player(
             format!("https://spclient.wg.spotify.com/color-lyrics/v2/track/{id}?format=json&vocalRemoval=false&market=from_token")
         }
     } else if name == "apple" {
-        let sf = state
-            .client
-            .get("https://amp-api.music.apple.com/v1/me/storefront")
-            .bearer_auth(text(&tok, "dev"))
-            .header("Media-User-Token", text(&tok, "user"))
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
-        if sf.status().is_success() {
-            let data: Value = sf.json().await.map_err(|e| e.to_string())?;
-            if let Some(id) = data["data"][0]["id"].as_str() {
-                tok["sf"] = json!(id);
-                state.set_secret("apple", Some(tok.clone()))?;
-            }
-        }
-        let sf = text(&tok, "sf");
-        if !sf.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
-            return Err("Invalid storefront".into());
+        let response = player_response(
+            app,
+            "apple",
+            "https://amp-api.music.apple.com/v1/me/storefront",
+            &mut tok,
+        )
+        .await?
+        .error_for_status()
+        .map_err(|e| format!("Apple Music account storefront request failed: {e}"))?;
+        let data: Value = response.json().await.map_err(|e| e.to_string())?;
+        let sf = storefront_id(&data)?;
+        // Never search the stale MusicKit 'us' fallback when account resolution fails.
+        if tok["sf"] != sf {
+            tok["sf"] = json!(sf);
+            state.set_secret("apple", Some(tok.clone()))?;
         }
         if operation == "search" {
             let mut query = url::form_urlencoded::Serializer::new(String::new());
@@ -242,40 +287,18 @@ pub async fn player(
     } else {
         return Err("Unsupported lyrics source".into());
     };
-    for attempt in 0..2 {
-        let mut request = state.client.get(&target).bearer_auth(if name == "apple" {
-            text(&tok, "dev")
-        } else {
-            text(&tok, "token")
-        });
-        if name == "apple" {
-            request = request
-                .header("Media-User-Token", text(&tok, "user"))
-                .header("Origin", "https://music.apple.com")
-                .header("Referer", "https://music.apple.com/");
-        } else {
-            request = request.header("app-platform", "WebPlayer");
-            if !text(&tok, "clientToken").is_empty() {
-                request = request.header("client-token", text(&tok, "clientToken"));
-            }
-        }
-        let response = request.send().await.map_err(|e| e.to_string())?;
-        if matches!(response.status().as_u16(), 401 | 403) && attempt == 0 {
-            tok = player_tokens(app, name, true).await?;
-            continue;
-        }
-        if response.status().as_u16() == 404 {
-            return Ok(json!({}));
-        }
-        return response
-            .error_for_status()
-            .map_err(|e| e.to_string())?
-            .json()
-            .await
-            .map_err(|e| e.to_string());
+    let response = player_response(app, name, &target, &mut tok).await?;
+    if response.status().as_u16() == 404 {
+        return Ok(json!({}));
     }
-    Err("The player session expired".into())
+    response
+        .error_for_status()
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())
 }
+
 pub async fn todo(app: &AppHandle, operation: &str, args: &[Value]) -> Result<Value, String> {
     let state = app.state::<State>();
     let arg = |i: usize| args.get(i).cloned().unwrap_or(Value::Null);
@@ -503,5 +526,128 @@ mod tests {
         );
         thread.join().unwrap();
         std::fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod apple_regression_tests {
+    use super::*;
+    #[test]
+    fn storefront_uses_the_same_player_headers_as_catalog_requests() {
+        let client = reqwest::Client::new();
+        let tokens = json!({"dev":"fake-developer","user":"fake-user","sf":"us"});
+        for url in [
+            "https://amp-api.music.apple.com/v1/me/storefront",
+            "https://amp-api.music.apple.com/v1/catalog/id/songs/1749498350/lyrics",
+        ] {
+            let request = apple_request(&client, url, &tokens).build().unwrap();
+            let headers = request.headers();
+            assert_eq!(
+                headers.get("origin").and_then(|v| v.to_str().ok()),
+                Some("https://music.apple.com")
+            );
+            assert_eq!(
+                headers.get("referer").and_then(|v| v.to_str().ok()),
+                Some("https://music.apple.com/")
+            );
+            assert_eq!(headers.get("media-user-token").unwrap(), "fake-user");
+            assert_eq!(
+                headers.get("authorization").unwrap(),
+                "Bearer fake-developer"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod storefront_validation_tests {
+    use super::*;
+    #[test]
+    fn account_storefront_must_be_resolved_instead_of_using_musickit_fallback() {
+        assert_eq!(storefront_id(&json!({"data":[{"id":"id"}]})).unwrap(), "id");
+        for data in [
+            json!({"errors":[{"status":"401"}]}),
+            json!({"data":[]}),
+            json!({"data":[{"id":""}]}),
+            json!({"data":[{"id":"../us"}]}),
+        ] {
+            assert!(storefront_id(&data).is_err());
+        }
+    }
+}
+
+#[cfg(test)]
+mod live_apple_tests {
+    use super::*;
+    // Explicit opt-in only: normal unit/CI runs never access an account or the network.
+    #[tokio::test]
+    #[ignore = "requires the user's connected Atoll Apple Music account"]
+    async fn reported_song_has_lyrics_in_the_accounts_real_storefront() {
+        let raw = keyring::Entry::new("app.atoll.notch.rust", "apple")
+            .unwrap()
+            .get_password()
+            .expect("Connect Apple Music in Atoll first");
+        let tokens: Value = serde_json::from_str(&raw).unwrap();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(20))
+            .user_agent(format!("Atoll/{}", crate::state::VERSION))
+            .build()
+            .unwrap();
+        let response = apple_request(
+            &client,
+            "https://amp-api.music.apple.com/v1/me/storefront",
+            &tokens,
+        )
+        .send()
+        .await
+        .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::OK);
+        let sf = storefront_id(&response.json::<Value>().await.unwrap()).unwrap();
+        let query = url::form_urlencoded::Serializer::new(String::new())
+            .append_pair("term", "Juicy Luicy HAHAHA")
+            .append_pair("types", "songs")
+            .append_pair("limit", "8")
+            .finish();
+        let search: Value = apple_request(
+            &client,
+            &format!("https://amp-api.music.apple.com/v1/catalog/{sf}/search?{query}"),
+            &tokens,
+        )
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+        let song = search["results"]["songs"]["data"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|song| {
+                song["attributes"]["name"] == "HAHAHA"
+                    && song["attributes"]["artistName"] == "Juicy Luicy"
+            })
+            .expect("Reported song is present in the account catalog");
+        let id = song["id"].as_str().unwrap();
+        let response = apple_request(
+            &client,
+            &format!("https://amp-api.music.apple.com/v1/catalog/{sf}/songs/{id}/lyrics"),
+            &tokens,
+        )
+        .send()
+        .await
+        .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::OK);
+        let body: Value = response.json().await.unwrap();
+        let ttml = body["data"][0]["attributes"]["ttml"]
+            .as_str()
+            .expect("Apple returns TTML for reported song");
+        assert!(
+            ttml.contains("<p ") && ttml.contains("begin="),
+            "Expected timed lyric paragraphs"
+        );
+        println!("Reported song: account storefront resolved to {sf}; native Rust requests returned HTTP 200 and {} lyric paragraphs. No credential or lyric text logged.",ttml.matches("<p ").count());
     }
 }
