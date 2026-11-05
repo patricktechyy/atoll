@@ -8,7 +8,7 @@ These rules exist so a change made on either laptop, by either AI, works on both
 
 1. `git status` and `git pull`. If the tree has uncommitted changes you did not make, or the pull conflicts, stop and ask the user. Do not overwrite their work.
 2. Read `STATE.md`: what the last session changed and what is still **unverified on which OS**.
-3. Check which OS you are on. You can only verify that OS. Never claim the other one works unless a test ran on it.
+3. Check which OS you are on. Working on one OS does not narrow the requested platform scope. Record which tests actually ran on each OS, distinguish simulated checks from real OS verification, and list untested platforms in `STATE.md`. Never claim an OS works unless a test ran on it.
 
 ## Where things live
 
@@ -28,7 +28,9 @@ These rules exist so a change made on either laptop, by either AI, works on both
 ## Rules
 
 1. **Shared first.** Put logic in `app/` so both platforms get it. Platform-specific code goes behind `capabilities()` and in `native/<os>/`.
-2. **Both platforms or documented.** A feature either works on both, or has a row in `PARITY.md` saying which platform lacks it and why. The settings UI for a missing feature must be hidden or explained, never broken.
+2. **Both platforms by default.** All features, fixes, UI changes, performance improvements, and architecture migrations must support both Windows and macOS unless the user explicitly requests a platform-specific change. Working on one operating system does not narrow the scope. Documenting a new platform limitation does not itself authorize excluding that platform.
+
+   Preserve existing documented OS differences in `PARITY.md`; platform-specific implementations may differ while providing equivalent behavior where supported. An explicit user request may narrow a change to one platform, but shared code must still avoid regressions on the other. Record any new user-requested platform exception and its reason in `PARITY.md`. The settings UI for a missing feature must be hidden or explained, never broken.
 3. **Test before you finish.** Run `npm test` (unit tests, any OS). On macOS also build and run `npm run test:ui` (see below). Add or update a test for what you changed. CI runs everything on both OSes after you push.
 4. **Never edit a built app.** Do not hand-edit anything inside `Atoll.app`, `dist/`, or an installed copy. Change the source, build, test.
 5. **One version, one changelog.** Bump `app/package.json` `version` only; add a `## <version>` section to `CHANGELOG.md` for anything user-visible. Releases need both (CI checks).
@@ -60,7 +62,7 @@ UI tests use Playwright. If it is not resolvable, set `ATOLL_PLAYWRIGHT_MODULE` 
 
 1. `npm test` (and the UI tests if you changed anything visible).
 2. Update `CHANGELOG.md` and, if platform behavior changed, `PARITY.md`.
-3. **Rewrite `STATE.md`**: what changed, which OS you tested on, and the "needs verifying on Windows / on macOS" list. Remove items you verified.
+3. **Rewrite `STATE.md`**: what changed and, for Windows and macOS separately, which checks actually ran, their results, and what remains unverified. Label simulated checks explicitly. Preserve outstanding verification items until they have actually been verified on the relevant OS; an untested platform remains in scope.
 4. Commit locally with a clear message. Tell the user to **Push** in GitHub Desktop (and to publish a Release if they want users to get it).
 
 ## Releasing (the user does this on github.com)

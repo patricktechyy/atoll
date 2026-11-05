@@ -1,7 +1,15 @@
 # Feature parity: Windows vs macOS
 
-Every feature works on both platforms unless it is listed here as intentionally different. Add a row when a
-change is one-sided, with the reason. `app/src/platform.js` (`capabilities()`) is where the code asks.
+All features, fixes, UI changes, performance improvements and architecture migrations target both Windows
+and macOS by default, as required by `AGENTS.md`. Only an explicit user request can narrow a change to one
+platform; the OS used for development does not change that scope. Adding a row here does not itself
+authorize a new platform exclusion.
+
+Preserve the existing intentional OS differences below. Different platform-specific implementations may
+provide equivalent behavior where supported. For any new user-requested platform exception, record the
+explicit request and its reason here. Track checks actually run on each OS and outstanding verification
+in `STATE.md`; simulated checks do not establish real OS verification.
+`app/src/platform.js` (`capabilities()`) is where the code asks about platform support.
 
 | Feature | Windows | macOS | Notes |
 | --- | --- | --- | --- |

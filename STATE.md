@@ -4,7 +4,16 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 
 **Last updated:** 2026-11-05, macOS (Codex). Version in the repo: 0.11.6, committed locally only. Latest fetched tag: v0.11.4; the 0.11.5 and 0.11.6 changes have not been pushed or released. Installed Mac app remains 0.11.5.
 
-## Latest session: repair Windows in-app updates (0.11.6)
+## Latest session: explicit support for both platforms (documentation only)
+
+- At the user's request, strengthened `AGENTS.md`: every feature, fix, UI change, performance improvement and architecture migration must support Windows and macOS unless the user explicitly requests a platform-specific change. Developing on one OS does not narrow scope, and documenting a new limitation does not authorize a platform exclusion.
+- Preserved existing documented OS differences and allowed different implementations for equivalent supported behavior. New user-requested exceptions must record the explicit request and reason in `PARITY.md`; shared code must avoid regressions on the other OS.
+- Aligned `PARITY.md` with this policy. `CLAUDE.md` still imports `AGENTS.md`, so Claude and Codex use the same rule without a duplicated policy.
+- Verification hand-offs must distinguish real OS tests from simulations, list actual results for each platform, and retain outstanding verification until checked on the relevant OS. Existing Windows/macOS verification lists below remain outstanding.
+- Verified on macOS: `npm test`, `git diff --check`, and documentation consistency checks (exact requested rule, Claude import, existing parity rows and pending verification preserved, only the three planned Markdown files changed). Windows tests and packaged UI checks were not run for this documentation-only change; prior unverified runtime items remain unverified.
+- Documentation only: no application code, API, app version, release notes or installed-app changes. Changes are committed locally without pushing.
+
+## Earlier session: repair Windows in-app updates (0.11.6)
 
 - Windows update support already existed, including NSIS packaging, GitHub provider settings, latest.yml/blockmap release assets and Settings → About. It was broken: both check and install called undefined `windowUpdater()` instead of `windowsUpdater()`. Reproduced with a new regression that returned error before reaching the dependency, then fixed both calls.
 - Windows checks now observe electron-updater's separate `downloadPromise`: downloads cannot be interrupted by another check, rejected downloads are caught, error events stay visible for background checks, and failed downloads can be retried. Synchronous installer error events return an unsuccessful install result. Existing install-on-quit behavior is preserved.
