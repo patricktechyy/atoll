@@ -1,7 +1,10 @@
 # Atoll
 
 A living Dynamic Island for **Windows and macOS**: music with synced lyrics, timers, calendar, notifications, files,
-clipboard history and system stats in your notch. Electron app, one codebase.
+clipboard history and system stats in your notch. One shared interface, with a new Rust/Tauri host for both platforms.
+
+The Rust migration is a release candidate; platform verification is tracked in [STATE.md](STATE.md).
+See [RUST_MIGRATION.md](RUST_MIGRATION.md) for architecture, migration details and remaining checks.
 
 On a MacBook with a camera notch, Atoll stays joined to it: compact content sits in the visible wings,
 and expanded pages grow down with their content below the camera. The layout adapts to the selected
@@ -28,8 +31,10 @@ to pick up the repaired updater. Subsequent releases update from within Atoll.
 ```bash
 npm ci --prefix app
 npm test                                    # unit tests (any OS)
-bash native/mac/build.sh dist/Atoll.app     # macOS build (Xcode Command Line Tools)
-npm run dist:win:dir --prefix app           # Windows unpacked build
+npm start --prefix app                     # run Rust host on this OS
+npm run test:rust --prefix app              # Rust unit tests
+npm run build:rust --prefix app             # macOS .app / Windows NSIS installer
+# Rust 1.87+, Xcode CLT (Mac) / Visual Studio C++ tools + SDK (Windows) required
 ```
 
 Everything about how to work on this repo, including the rules for AI assistants and how both platforms are kept in
@@ -50,4 +55,4 @@ to be `patricktechyy/atoll`; if it is named differently, update `build.publish` 
 
 ## License
 
-MIT. Atoll bundles Electron and Chromium, whose licenses ship inside the app.
+MIT. The Rust build uses Tauri and the OS WebView. The retained Electron fallback bundles Electron/Chromium and their licenses.

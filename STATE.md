@@ -2,7 +2,39 @@
 
 Rewritten at the end of every session. Read it first; clear items from "Needs verifying" when you verify them.
 
-**Last updated:** 2026-11-05, macOS (Codex). Version in the repo: 0.11.6, committed locally only. Latest fetched tag: v0.11.4; the 0.11.5 and 0.11.6 changes have not been pushed or released. Installed Mac app remains 0.11.5.
+**Last updated:** 2026-11-05, macOS arm64 (Codex). Source version: **0.12.0 Rust migration candidate**, local only. No push or release. Installed `/Applications/Atoll.app` remains **0.11.5 Electron**. Latest fetched tag remains v0.11.4.
+
+## Latest session: Rust host for Windows and macOS (0.12.0 candidate)
+
+- User requested the app be ported to Rust while keeping all features on both OSes. Implemented a Rust/Tauri host in `rust/`, retaining the shared HTML/CSS/JS interface and native companions. The Rust bundle contains no Electron/Node runtime. **The request for verified full parity is not complete:** real Windows and account/permission/installation checks remain below; no platform has been excluded.
+- `app/renderer/rust-bridge.js` implements all 95 existing public API methods; `rust-auth.js` gives remote player pages only token-capture permission. Rust implements storage, networking, account vault integration, clipboard, screenshots, window placement/click-through, tray, shortcuts/autostart, notification API, native helper supervision, metrics and compatible updates. Existing pure calendar/lyrics/translation/task algorithms are generated from the original source, rather than rewritten separately.
+- Preserved the connected MacBook notch layout and per-display camera rectangle, position presets and the existing OS differences. Added native battery/charging events for WKWebView, clipboard polling fallback and privacy filtering, and Windows helper core/PowerShell fallbacks. Diagnostics label host/helper memory and exclude OS-managed WebViews; no total-memory improvement has been measured or claimed.
+- Profiles stay in the existing Atoll directory and receive a one-time `atoll.pre-rust.json` backup. Unknown data is retained; corrupt JSON is not overwritten; serialized writes use atomic replacement on both OSes. **Spotify, Apple Music and Todolist need reconnection** because Electron encrypted sessions cannot be imported into the OS WebViews. New secrets use Keychain / Windows Credential Manager. Windows saved monitor IDs may need re-selection because the WebView host enumerates native monitor names rather than Electron IDs.
+- Kept release names, app id and product name. Rust handles the same Mac SHA-256 zip feed and Windows SHA-512 YAML feed, with Mac identity/version/signature/minimum-OS checks and read-only install fallback. Windows has NSIS legacy uninstall/profile-backup and relaunch hooks. The fixture harness never executes an installer. `tools/rust-release.js` produces the old asset/feed names plus Windows blockmaps.
+- `npm start`, `build:mac`, `dist:win` and `build:rust` now use Rust. Electron remains available through explicitly named fallback commands. Existing Playwright tests target Electron; `test:rust:ui` tests the actual WKWebView/WebView2 executable using disposable profiles. CI and Release now include both OS Rust builds/tests; existing Electron CI regression jobs remain. The user must push to run the Windows job; no workflow was dispatched or release published here.
+- **Remaining behavior difference:** Windows maps GPU-off to WebView2. WKWebView has no equivalent supported GPU-off switch; the Mac Rust UI explains system-managed graphics and preserves the saved preference for the Electron fallback. Do not claim the Rust host preserves that control or that this documentation authorizes dropping it. Review/resolve this before declaring complete parity.
+- Local build: `rust/target/release/bundle/macos/Atoll.app`, optimized, about 10.2 MiB with dependency notices; zip/feed in `dist/rust`. Signed with the same local Apple Development certificate as the installed app. Signature/identifier/version checks passed. The build uses `profile.release.build-override.strip=false` to avoid macOS 27 rejecting stripped build-time proc-macro dylibs (rust-lang/rust#157750).
+
+### Verification on macOS in this session
+
+- `npm test` passed, including a new executable-adapter contract check for all 95 methods on darwin/win32 and the restricted remote capability configuration. The win32 VM branch is a simulation, not Windows verification.
+- Rust `cargo check`, `cargo test` (7 tests), `cargo fmt --check`, and clippy with warnings denied passed. Tests cover storage migration/privacy, invalid-file preservation, concurrent atomic writes, slider units, feed/version/asset validation and bounded privileged HTTP. Loopback test execution requires an unsandboxed local test process; it passed there.
+- Actual Mac WKWebView checks passed in both the debug executable and the signed optimized app: Pages/Tabs, every panel's viewport/camera clearance, task creation, water/undo, focus start, HUD wings, battery/metrics/trim command, all 12 Settings sections, Setup, separate notification camera header, registered shortcuts, account status interface, lyric-source policy, language/task helpers and local update-feed check/checksum rejection/recovery. These are actual WebView tests; they do not establish real account or permission behavior.
+- Built separate certificate-signed `dist/Atoll-0.12.0-electron-regression.app` and ran the full existing shared `test:ui` suite successfully: tasks, screen selection, integrated notch/simulated external screens, lyrics policy, and the **Electron** Mac updater installation/corruption/read-only end-to-end scenarios. Rust fixture checks do not install an update.
+- JavaScript syntax, workflow YAML parsing, release tag/changelog validation and whitespace checks passed. Final signed candidate: **90 actual Mac WKWebView assertions passed, zero renderer errors**; signature verification and local zip/feed generation passed. The latest test report is in ignored `.cache/rust-qa-latest.json`. Windows startup browser flags are snapshotted consistently across local windows and apply GPU/lite changes only after restart; this Windows-specific path remains untested.
+
+### Verification on Windows in this session
+
+- **No real Windows build, runtime, installer or UI test ran.** Installed the Rust Windows MSVC target and attempted a cross-check from macOS; it stopped in the `ring` dependency because the Windows SDK headers/toolchain were absent. This did not reach a valid Windows app build and is not evidence of Windows compatibility.
+- Windows remains fully in scope: run the new Windows CI matrix, then verify native helpers/fallbacks, Apple Music/Spotify controls and accounts, toast access, clipboard/paste, file icons/dragging, screenshots, mixed-DPI monitors, autostart, Electron → Rust installer migration and Rust → Rust updates (Restart and quit) on a real machine.
+
+### Remaining Rust verification on both OSes
+
+- Real signed-in player lyrics/search/refresh/popups/disconnect, Todolist sync/CRUD and credential-vault behavior.
+- Real Mac EventKit grants/events, permission prompts/grant persistence, screen capture and OS drag/Spaces behavior. Actual external monitors/mixed DPI and fullscreen transitions on each OS.
+- Consecutive-version updates, installer relaunch and profile retention, including existing Electron → Rust migration.
+- Resolve/review the Mac graphics-control difference and measure whole-app resource use under matched workloads before describing the migration as a complete parity/performance replacement.
+- All earlier unresolved verification items below remain outstanding; historical Electron results do not verify the Rust host. See `RUST_MIGRATION.md` for architecture, commands and the feature implementation map.
 
 ## Latest session: explicit support for both platforms (documentation only)
 

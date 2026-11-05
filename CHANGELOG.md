@@ -2,6 +2,13 @@
 
 Each release needs a `## <version>` section. It becomes the GitHub release notes and the in-app "What's new".
 
+## 0.12.0 - 2026-11-05
+
+- Added a Rust/Tauri desktop host for Windows and macOS using the existing shared interface. The packaged Rust app uses WebView2 on Windows and WKWebView on macOS, without bundling Electron or Node.js. Retains the 95-method renderer contract, native media helpers, integrated MacBook notch, calendars, clipboard, screenshots, tasks, focus, water, notifications, shortcuts and tray controls.
+- Preserves the existing Atoll profile and makes a one-time backup before migrating. Player and Todolist accounts must be connected again: OS WebViews cannot reuse Electron's encrypted sessions. New account credentials use the OS credential vault.
+- Added native battery events, Rust networking/persistence/update handling, compatible update feeds and a Windows installer migration hook. Memory diagnostics explicitly label the host/helper scope rather than implying it includes OS WebView processes.
+- Rust remains under parity verification. macOS is being tested locally; a Windows build, real media accounts, permission prompts, installer migration and consecutive-version updates still require platform verification before release. The Electron implementation remains available for regression checks and fallback. See `RUST_MIGRATION.md` and `STATE.md`.
+
 ## 0.11.6 - 2026-11-05
 
 - Windows: fixed in-app update checks and Restart to update failing before the Windows updater was called. Settings → About now checks for new releases, downloads the installer and offers to restart. Download errors are handled, failed downloads can be retried, and repeated checks cannot interrupt an active download. Settings also explains that a downloaded Windows update installs when Atoll quits.

@@ -9,7 +9,11 @@ Preserve the existing intentional OS differences below. Different platform-speci
 provide equivalent behavior where supported. For any new user-requested platform exception, record the
 explicit request and its reason here. Track checks actually run on each OS and outstanding verification
 in `STATE.md`; simulated checks do not establish real OS verification.
-`app/src/platform.js` (`capabilities()`) is where the code asks about platform support.
+`rust/src/platform.rs` and retained `app/src/platform.js` (`capabilities()`) are where the hosts ask about platform support.
+
+The Rust host targets every existing supported feature on both OSes, but full parity is still under
+verification. `RUST_MIGRATION.md` lists implementation details and outstanding migration checks;
+these are not authorization to exclude a platform. The rows below describe the existing product baseline.
 
 | Feature | Windows | macOS | Notes |
 | --- | --- | --- | --- |
@@ -25,3 +29,12 @@ in `STATE.md`; simulated checks do not establish real OS verification.
 | System indicators (volume, caps lock, charging…) | yes | partly | Helper-based; macOS helper (`native/mac/helper.m`) covers fewer indicators. Check before promising a new one on Mac. |
 | Permission setup (Accessibility, Screen Recording, Automation) | n/a | yes | macOS only. After each Mac update macOS may refuse the new build while System Settings still shows Atoll as allowed (ad hoc signing). Settings has **Fix permission** per permission (`app/src/mac-permissions.js`: `tccutil reset` for Atoll only, then asks again). Windows has no equivalent permissions. |
 | Signing | unsigned (SmartScreen warning on first install) | ad hoc by default (right-click → Open on first launch); `ATOLL_SIGN_IDENTITY` signs with a certificate so permissions survive rebuilds | Developer ID / code-signing certificate would remove both warnings. |
+
+## Runtime migration checks
+
+The Rust updater retains the same feeds and Restart/quit behavior as the baseline above; real installation
+transitions remain unverified. OS WebViews require a one-time account reconnect on both platforms. The
+Windows software-rendering preference maps to WebView2; the Mac Rust host explains that WKWebView manages
+graphics rather than showing an ineffective switch. The Electron fallback retains that control. Treat
+this as an outstanding migration behavior difference, not as completed full parity. See `STATE.md` for
+actual OS test results and `RUST_MIGRATION.md` for all remaining checks.

@@ -72,7 +72,7 @@
     ),
     h2('Performance'),
     group(
-      row('Use the graphics card', 'Smooth animations without leftover shadows. Turn off only if your graphics driver misbehaves. Restart to apply.', toggle('gpu'), { icon: 'cpu' }),
+      row('Use the graphics card', window.atoll?.caps?.graphicsControl === false ? 'macOS manages graphics automatically for this app.' : 'Smooth animations without leftover shadows. Turn off only if your graphics driver misbehaves. Restart to apply.', window.atoll?.caps?.graphicsControl === false ? '<span class="chip">Managed by macOS</span>' : toggle('gpu'), { icon: 'cpu' }),
       row('Lite mode', mac ? 'Reduce visual effects.' : 'Less visual processing and a smaller JavaScript memory budget. Restart to apply process settings.', `<button class="btn sm" id="restart">Restart now</button>${toggle('lite')}`, { icon: 'flame' })
     )
   ].join('');
@@ -638,10 +638,10 @@
     if (pb && x.atollMem) {
       const ago = x.lastTrim ? Math.round((Date.now() - x.lastTrim) / 1000) : 0;
       const gfx = (res.Graphics || 0);
-      pb.innerHTML = `<div class="part head"><span></span><span></span><b>In RAM</b><b>Private commit</b></div>` +
-        `<div class="part"><span><b style="text-align:left">Total</b></span><span class="hint" style="margin:0">${x.atollProcs || ''} processes${st().lite !== false ? ' · Lite mode' : ''}</span><b>${bytes(x.atollMem)}</b><b class="dim">${x.atollReserved ? bytes(x.atollReserved) : ''}</b></div>` +
+      pb.innerHTML = `<div class="part head"><span></span><span></span><b>In RAM</b><b>${x.memoryScope ? '' : 'Private commit'}</b></div>` +
+        `<div class="part"><span><b style="text-align:left">${x.memoryScope ? 'Host + helper' : 'Total'}</b></span><span class="hint" style="margin:0">${x.atollProcs || ''} processes${st().lite !== false ? ' · Lite mode' : ''}</span><b>${bytes(x.atollMem)}</b><b class="dim">${x.atollReserved ? bytes(x.atollReserved) : ''}</b></div>` +
         parts.map(([k, v]) => `<div class="part"><span>${esc(k)}</span><span class="bar"><i style="width:${(100 * v / max).toFixed(1)}%"></i></span><b>${bytes(v)}</b><b class="dim">${res[k] ? bytes(res[k]) : ''}</b></div>`).join('') +
-        `<div class="mem-foot"><span class="hint" style="margin:0">Hidden lists and artwork caches are kept small. Manual trim evicts resident pages temporarily and may slow the next interaction${x.lastTrim ? ` · last time ${ago < 60 ? ago + ' s' : Math.round(ago / 60) + ' min'} ago` : ''}.${x.gpuOn && gfx > 60e6 ? ` The graphics process has private commit of ${bytes(gfx)}: <a data-goto="general">turn it off</a> to save that, at the cost of smoothness.` : ''}</span><button class="btn sm" id="trim-now">Free memory now</button></div>` +
+        `<div class="mem-foot"><span class="hint" style="margin:0">${x.memoryScope ? esc(x.memoryScope) + '. ' : ''}Hidden lists and artwork caches are kept small. Manual trim evicts resident pages temporarily and may slow the next interaction${x.lastTrim ? ` · last time ${ago < 60 ? ago + ' s' : Math.round(ago / 60) + ' min'} ago` : ''}.${x.gpuOn && gfx > 60e6 ? ` The graphics process has private commit of ${bytes(gfx)}: <a data-goto="general">turn it off</a> to save that, at the cost of smoothness.` : ''}</span><button class="btn sm" id="trim-now">Free memory now</button></div>` +
         (x.helperError ? `<span class="err">Native helper unavailable, using PowerShell: ${esc(x.helperError.slice(0, 300))}</span>` : '');
       const tb = $('#trim-now'); if (tb) tb.onclick = async () => { tb.disabled = true; if (api.trimNow) await api.trimNow(); setTimeout(() => { tb.disabled = false; pollStats(); }, 1500); toast('Memory cleanup requested'); };
       $$('[data-goto]', pb).forEach((a2) => a2.onclick = () => go(a2.dataset.goto));
@@ -655,7 +655,7 @@
     const kinds = { native: 'Native helper ✓ (light)', 'native-core+powershell': 'Native core + PowerShell for music', powershell: 'PowerShell helper (heavy fallback)', none: 'No helper running' };
     $('#diag-sum').textContent = `${kinds[h.kind] || h.kind || '?'} · clipboard: ${d.clipboard.count} saved this session${d.clipboard.last ? ' (last ' + hhmm(d.clipboard.last) + ' via ' + d.clipboard.via + ')' : ''}`;
     const lines = [
-      `Atoll ${d.version} · Electron ${d.electron} · ${mac ? 'Darwin' : 'Windows'} ${d.windows} · Lite ${d.lite}`,
+      `Atoll ${d.version} · ${d.runtime || ('Electron ' + d.electron)} · ${mac ? 'Darwin' : 'Windows'} ${d.windows} · Lite ${d.lite}`,
       `Helper: ${h.kind}${h.exe ? ' (' + h.exe.split(/[\\/]/).pop() + ')' : ''}`,
       ...(h.parts ? [`Parts: ${Object.entries(h.parts).map(([k, v]) => k + (v ? ' ✓' : ' ✗')).join(', ')}`] : []),
       ...Object.entries(h.build || {}).map(([k, v]) => `Build ${k} failed: ${v}`),

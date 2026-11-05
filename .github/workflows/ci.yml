@@ -68,7 +68,7 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci --prefix app
       - name: Build the unpacked Windows app (compiles the native helpers with csc)
-        run: npm run dist:win:dir --prefix app
+        run: npm run dist:win:electron:dir --prefix app
         env:
           ATOLL_REQUIRE_FRESH_HELPER: "0"   # set to "1" once the helper compiles cleanly on the runner
       - name: UI tests (shared)
@@ -79,3 +79,41 @@ jobs:
         env:
           ATOLL_APP: ${{ github.workspace }}\dist\win-unpacked\Atoll.exe
         run: npm run test:win --prefix app
+
+  rust:
+    name: Rust host (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.87.0
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - run: npm ci --prefix app
+      - run: node tools/prepare-rust.js
+      - run: cargo fmt --manifest-path rust/Cargo.toml --check
+      - run: cargo test --manifest-path rust/Cargo.toml --locked
+      - run: cargo clippy --manifest-path rust/Cargo.toml --locked -- -D warnings
+      - run: cargo build --manifest-path rust/Cargo.toml --locked
+      - name: Real platform WebView integration tests (disposable profile)
+        run: node tools/run-rust-qa.js
+      - name: Build Rust application / NSIS installer
+        run: npm run build:rust --prefix app
+      - name: Package compatible release assets
+        run: node tools/rust-release.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rust-${{ matrix.os }}
+          path: dist/rust/*

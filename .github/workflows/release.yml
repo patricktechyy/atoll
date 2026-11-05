@@ -2,8 +2,8 @@ name: Release
 
 # Publish a Release on GitHub (Releases -> Draft a new release -> choose a NEW tag like v0.11.0 -> Publish).
 # This workflow then builds both platforms and attaches the files the in-app updater reads:
-#   Windows: Atoll-Setup-<version>.exe, latest.yml, .blockmap     (electron-updater)
-#   macOS:   Atoll-macOS-arm64.zip, latest-mac.json               (custom updater in app/src/updater.js)
+#   Windows: Atoll-Setup-<version>.exe, latest.yml, .blockmap     (legacy + Rust updater)
+#   macOS:   Atoll-macOS-arm64.zip, latest-mac.json               (legacy + Rust updater)
 # The tag must be v<version in app/package.json>, and CHANGELOG.md needs a "## <version>" section.
 on:
   release:
@@ -52,22 +52,27 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.87.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
       - run: npm ci --prefix app
       - run: npm test --prefix app
-      - run: bash native/mac/build.sh dist/Atoll.app
+      - run: npm run test:rust --prefix app
+      - run: npm run build:rust --prefix app
       - name: UI tests on the built app
         env:
-          ATOLL_APP: ${{ github.workspace }}/dist/Atoll.app
-        run: npm run test:ui --prefix app
+          ATOLL_RUST_APP: ${{ github.workspace }}/rust/target/release/bundle/macos/Atoll.app
+        run: npm run test:rust:ui --prefix app
       - name: Package and write the update feed
         run: |
-          ditto -c -k --sequesterRsrc --keepParent dist/Atoll.app Atoll-macOS-arm64.zip
-          node tools/release-notes.js mac-feed "${{ needs.check.outputs.version }}" Atoll-macOS-arm64.zip latest-mac.json
-          shasum -a 256 Atoll-macOS-arm64.zip | cut -d' ' -f1 > Atoll-macOS-arm64.zip.sha256
+          node tools/rust-release.js
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" Atoll-macOS-arm64.zip Atoll-macOS-arm64.zip.sha256 latest-mac.json --clobber
+        run: gh release upload "$TAG" dist/rust/Atoll-macOS-arm64.zip dist/rust/Atoll-macOS-arm64.zip.sha256 dist/rust/latest-mac.json --clobber
 
   windows:
     name: Windows build
@@ -82,23 +87,30 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.87.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
       - run: npm ci --prefix app
       - run: npm test --prefix app
-      - name: Build the installer
-        run: npm run dist:win --prefix app
+      - run: npm run test:rust --prefix app
+      - name: Build the Rust installer
+        run: npm run build:rust --prefix app
       - name: Test the packaged Windows app and updater before publishing
         env:
-          ATOLL_APP: ${{ github.workspace }}\dist\win-unpacked\Atoll.exe
-        run: |
-          npm run test:ui --prefix app
-          npm run test:win --prefix app
+          ATOLL_RUST_APP: ${{ github.workspace }}\rust\target\release\Atoll.exe
+        run: npm run test:rust:ui --prefix app
+      - name: Package compatible update feeds
+        run: node tools/rust-release.js
       - name: Attach to the release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ls dist
-          gh release upload "$TAG" "dist/Atoll-Setup-${{ needs.check.outputs.version }}.exe" "dist/Atoll-Setup-${{ needs.check.outputs.version }}.exe.blockmap" dist/latest.yml --clobber
+          ls dist/rust
+          gh release upload "$TAG" "dist/rust/Atoll-Setup-${{ needs.check.outputs.version }}.exe" "dist/rust/Atoll-Setup-${{ needs.check.outputs.version }}.exe.blockmap" dist/rust/latest.yml --clobber
 
   notes:
     name: Release notes

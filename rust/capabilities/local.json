@@ -1,0 +1,16 @@
+{
+  "identifier": "local",
+  "description": "Only bundled Atoll windows can access desktop commands",
+  "windows": [
+    "main",
+    "settings",
+    "setup",
+    "toast",
+    "snip"
+  ],
+  "permissions": [
+    "core:default",
+    "allow-rpc",
+    "drag:default"
+  ]
+}

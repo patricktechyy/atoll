@@ -1774,7 +1774,7 @@
       <div class="stat"><div class="k">${I.memory}Memory</div><div class="v">${memPct}<small>%</small></div><div class="s">${bytes(x.memUsed)} of ${bytes(x.memTotal)}</div><div class="meter"><i style="width:${memPct}%"></i></div></div>
       <div class="stat"><div class="k">${I.down}Network</div><div class="v" style="font-size:20px">${bytes(x.down)}/s</div><div class="s">↑ ${bytes(x.up)}/s</div>${spark(S.netHist, Math.max(1e5, ...S.netHist), '#64d2ff')}</div>
       <div class="stat"><div class="k">${I.battery}Battery</div><div class="v">${noBatt ? '—' : pct + '<small>%</small>'}</div><div class="s">${noBatt ? 'Plugged in' : b.charging ? 'Charging' : 'On battery'} · up ${up}h ${Math.floor((x.uptime % 3600) / 60)}m</div><div class="meter"><i style="width:${noBatt ? 100 : pct}%;background:${!noBatt && pct <= 20 ? 'var(--danger)' : 'var(--green)'}"></i></div></div>
-      <div class="stats-foot">${x.atollMem ? `Atoll itself: ${bytes(x.atollMem)} · ${Object.entries(x.atollParts || {}).sort((a, c) => c[1] - a[1]).map(([k, v]) => `${esc(k)} ${bytes(v)}`).join(' · ')}` : ''}</div>`);
+      <div class="stats-foot">${x.atollMem ? `${x.memoryScope ? 'Host + helper' : 'Atoll itself'}: ${bytes(x.atollMem)} · ${Object.entries(x.atollParts || {}).sort((a, c) => c[1] - a[1]).map(([k, v]) => `${esc(k)} ${bytes(v)}`).join(' · ')}` : ''}</div>`);
   }
 
   /* ---------------- settings changed (in the settings window) ---------------- */
