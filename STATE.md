@@ -2,7 +2,13 @@
 
 Rewritten at the end of every session. Read it first; clear items from "Needs verifying" when you verify them.
 
-**Last updated:** 2026-11-05, macOS arm64 (Codex). Source version: **0.12.0 Rust migration candidate**, local only. No push or release. Installed `/Applications/Atoll.app` remains **0.11.5 Electron**. Latest fetched tag remains v0.11.4.
+**Last updated:** 2026-11-05, macOS arm64 (Codex). Source version: **0.12.0 Rust migration candidate**, local only. No push or release. Installed `/Applications/Atoll.app` is now **0.12.0 Rust/Tauri**, replaced at the user's explicit request on 2026-11-05. Latest fetched tag remains v0.11.4.
+
+## Installation follow-up: Rust candidate installed on this Mac
+
+- User explicitly requested replacement of the installed app with the new Rust candidate. Verified the source-built candidate signature and bundle identifier/version, then backed up the complete old profile and moved the old 0.11.5 Electron app to `../Backups/Atoll-0.11.5-before-rust-20261105-204140/` (contains `Atoll.app` and `Profile/`). There was no running Atoll process before replacement.
+- Copied the signed 0.12.0 candidate as a whole bundle into `/Applications/Atoll.app` through a verified staging bundle; no built files were hand-edited. Launched it with LaunchServices. Confirmed both `/Applications/Atoll.app/Contents/MacOS/Atoll` and its packaged `atoll-mac` companion running, the installed executable's SHA-256 matching the tested build, successful deep/strict signature verification, a valid settings JSON and the one-time `atoll.pre-rust.json` migration backup.
+- This verifies installation and process launch on this Mac only. It does not resolve the remaining Windows, real account, privacy-permission or update-transition checks below. Account reconnection remains required. No push or release was performed.
 
 ## Latest session: Rust host for Windows and macOS (0.12.0 candidate)
 
