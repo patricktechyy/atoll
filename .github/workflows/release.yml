@@ -86,6 +86,12 @@ jobs:
       - run: npm test --prefix app
       - name: Build the installer
         run: npm run dist:win --prefix app
+      - name: Test the packaged Windows app and updater before publishing
+        env:
+          ATOLL_APP: ${{ github.workspace }}\dist\win-unpacked\Atoll.exe
+        run: |
+          npm run test:ui --prefix app
+          npm run test:win --prefix app
       - name: Attach to the release
         shell: bash
         env:

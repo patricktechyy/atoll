@@ -2,6 +2,7 @@
 (async function () {
   const api = window.API;
   const mac = window.atoll?.platform === 'darwin';
+  const installsOnQuit = window.atoll?.caps?.installsOnQuit === true;
   if (mac) document.body.classList.add('mac'); // room for the window buttons (hidden title bar)
   const I = window.ICONS;
   const $ = (s, r = document) => r.querySelector(s);
@@ -346,7 +347,7 @@
     const sub = {
       checking: 'Checking for updates…',
       downloading: `Downloading Atoll ${esc(u.version || '')}${pct ? ` · ${pct}%` : '…'}`,
-      ready: `Atoll ${esc(u.version || '')} is ready. It installs when you restart.`,
+      ready: installsOnQuit ? `Atoll ${esc(u.version || '')} is ready. Restart now or quit Atoll to install.` : `Atoll ${esc(u.version || '')} is ready. It installs when you restart.`,
       uptodate: `You have the latest version (${esc(u.current)}).`,
       error: `<span class="err">${esc(u.error || 'Could not check for updates.')}</span>`,
       unavailable: esc(u.error || 'Updates are not available in this build.'),
@@ -360,7 +361,7 @@
       group(
         row('Software update', sub, ctl, { icon: 'refresh' }),
         u.state === 'ready' && u.notes ? tall(`What’s new in ${esc(u.version || '')}`, '', `<div class="notes">${esc(u.notes).replace(/\n/g, '<br>')}</div>`) : '',
-        row('Update automatically', 'Check in the background every few hours and download updates. Nothing is installed until you choose Restart.', toggle('autoUpdate'), { icon: 'bolt' })
+        row('Update automatically', installsOnQuit ? 'Check in the background every few hours and download updates. Updates install when you choose Restart or quit Atoll.' : 'Check in the background every few hours and download updates. Nothing is installed until you choose Restart.', toggle('autoUpdate'), { icon: 'bolt' })
       )
     ].join('');
   };

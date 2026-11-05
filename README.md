@@ -14,9 +14,14 @@ display, so external monitors use the usual layout.
 
 ## Updates
 
-Atoll checks the GitHub Releases of this repository in the background (Settings → About → Update automatically) and
-installs a new version only when you choose **Restart to update**. On macOS the build is ad hoc signed, so macOS may ask
-for permissions again after an update.
+Atoll checks the GitHub Releases of this repository in the background (Settings → About → Update automatically),
+downloads new versions and offers **Restart to update**. On macOS, installation waits for that button;
+the default release build is ad hoc signed, so macOS may ask for permissions again after an update.
+
+On Windows, Settings → About downloads updates in the background and offers **Restart to update**.
+A downloaded update also installs when you quit Atoll. Use the Setup installer for Windows updates;
+old portable builds and Windows versions through 0.11.5 need one manual installation of 0.11.6 or later
+to pick up the repaired updater. Subsequent releases update from within Atoll.
 
 ## Develop
 

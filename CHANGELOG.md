@@ -2,6 +2,10 @@
 
 Each release needs a `## <version>` section. It becomes the GitHub release notes and the in-app "What's new".
 
+## 0.11.6 - 2026-11-05
+
+- Windows: fixed in-app update checks and Restart to update failing before the Windows updater was called. Settings → About now checks for new releases, downloads the installer and offers to restart. Download errors are handled, failed downloads can be retried, and repeated checks cannot interrupt an active download. Settings also explains that a downloaded Windows update installs when Atoll quits.
+
 ## 0.11.5 - 2026-11-05
 
 - Mac: Atoll stays joined to the physical MacBook notch and now adapts to its measured camera housing. Compact activities and HUD controls sit in visible wings beside the camera; expanded pages, notifications and move controls grow out of the same connected shape with their content below the camera. Camera dimensions stay correct at every Atoll size. External and notch-free displays keep the usual layout, and switching screens or reconnecting them updates the layout automatically. Saved positions are preserved.

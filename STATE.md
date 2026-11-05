@@ -2,9 +2,20 @@
 
 Rewritten at the end of every session. Read it first; clear items from "Needs verifying" when you verify them.
 
-**Last updated:** 2026-11-05, macOS (Codex). Version in the repo: 0.11.5, committed locally only. Latest fetched tag: v0.11.4; 0.11.5 has not been pushed or released.
+**Last updated:** 2026-11-05, macOS (Codex). Version in the repo: 0.11.6, committed locally only. Latest fetched tag: v0.11.4; the 0.11.5 and 0.11.6 changes have not been pushed or released. Installed Mac app remains 0.11.5.
 
-## Latest session: integrated physical MacBook notch (0.11.5)
+## Latest session: repair Windows in-app updates (0.11.6)
+
+- Windows update support already existed, including NSIS packaging, GitHub provider settings, latest.yml/blockmap release assets and Settings → About. It was broken: both check and install called undefined `windowUpdater()` instead of `windowsUpdater()`. Reproduced with a new regression that returned error before reaching the dependency, then fixed both calls.
+- Windows checks now observe electron-updater's separate `downloadPromise`: downloads cannot be interrupted by another check, rejected downloads are caught, error events stay visible for background checks, and failed downloads can be retried. Synchronous installer error events return an unsuccessful install result. Existing install-on-quit behavior is preserved.
+- Shared Settings uses capabilities().installsOnQuit to explain the Windows Restart/quit behavior accurately; macOS still installs only via Restart.
+- Tests: `app/test/windows-updater.test.js` runs the real Windows branch on any host with only the electron-updater dependency replaced. Covers check/download/progress/ready/restart, checksum/network errors and retry, single updater instance, background preference, source/test guards and feed isolation. `app/test/windows-updater-ui.test.js` exercises packaged Windows Settings + IPC with a fake NSIS dependency and local test feed; added to `npm run test:win` and both CI and release Windows checks. It never executes an installer or touches live releases.
+- The release workflow now runs shared UI + Windows smoke/updater UI checks on the built Windows app before attaching release assets. Installer/feed asset names are unchanged.
+- Rollout: existing Windows builds through 0.11.5 cannot fetch this fix using their broken updater. The user must push in GitHub Desktop, wait for both OS jobs, publish v0.11.6, and install its Windows Setup executable once. Older portable Windows users must also install Setup once. Then verify a real NSIS update from 0.11.6 to the next release.
+- Verified on macOS arm64: `npm test` (including the Windows branch regression with a fake installer dependency); certificate-signed build; `ATOLL_APP="$PWD/dist/Atoll-0.11.6.app" npm run test:ui` (all shared tests, connected notch tests, and the real Mac update/download/checksum/install/relaunch scenarios); JavaScript syntax and release-workflow YAML checks. The packaged Windows updater UI test explicitly skips on macOS and has NOT run on Windows yet; actual Windows NSIS installation/relaunch remains unverified.
+- Built certificate-signed Mac regression app at `dist/Atoll-0.11.6.app`; `/Applications/Atoll.app` was left on 0.11.5. No Windows binary was built on this Mac; no push/release was performed.
+
+## Earlier session: integrated physical MacBook notch (0.11.5)
 
 - User requirement: keep Atoll merged with the hardware camera notch. Do not automatically move the island down into a detached, fully rounded pill.
 - Native `screenSafeAreas()` in `native/mac/platform.m` returns the selected display's camera height, left edge and width using NSScreen safeAreaInsets + auxiliary top areas, matched by display ID. All measurements are points, not Retina pixels. This Mac reports left 663.5, width 185, height 32 at 1512×982.
@@ -55,7 +66,7 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 - The shared test suite and `win-smoke` PASSED on the GitHub Windows runner (2026-11-04). Still unverified on a real Windows laptop.
 - `npm run dist:win:dir` / `dist:win` (electron-builder): `native/win/build-helper.js` was recreated from `app/src/native.js` (`buildHelper`) and has never run. Prebuilt helpers in `native/win/prebuilt/` are used as fallback (CI does not yet require a fresh compile: `ATOLL_REQUIRE_FRESH_HELPER=0`).
 - `app/test/win-smoke.test.js` (written without a Windows machine).
-- electron-updater path: install `Atoll-Setup-0.11.0.exe` from the v0.11.0 release, then Settings → About → Check for updates should find 0.11.1 and Restart should install it. The release assets (`latest.yml`, installer, blockmap) exist; the Windows updater code path itself has never run on a real Windows machine.
+- Windows updater 0.11.6: run the new `npm run test:win` packaged updater UI test on Windows (not run locally). After publishing, manually install 0.11.6 once and verify a real update to the following release, including NSIS installer execution, relaunch, settings retention, checksum rejection and installing a staged update on quit. The old 0.11.0→0.11.1 instructions were superseded: that path had the undefined-function bug fixed in 0.11.6.
 - Windows app after this session's shared-code changes: lyrics routing (Apple Music for Windows app id `AppleInc.AppleMusic…` must map to Apple Music), display selector, calendar settings (ICS only, Apple row hidden), About page.
 - Upgrade from the old portable folder to the installer keeps settings in `%APPDATA%\Atoll` (same `appId`/`productName`); confirm on the first real install.
 - `app/test/reminders-settings-ui.test.js` is a leftover browser-level test needing a Chrome path; not in any suite. Decide to fix or delete.

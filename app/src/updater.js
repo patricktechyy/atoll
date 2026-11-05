@@ -239,7 +239,7 @@ function createUpdater({ app, net, getSettings, sendAll, notify, pkg, env = proc
 
   // ---- public
   async function check({ manual = false } = {}) {
-    if (busy) return { ...state };
+    if (busy || state.state === 'downloading') return { ...state };
     if (!enabled()) { set({ state: 'unavailable', error: info ? '' : 'This build has no update source configured.' }); return { ...state }; }
     if (state.state === 'ready') return { ...state };
     busy = true;
@@ -248,11 +248,14 @@ function createUpdater({ app, net, getSettings, sendAll, notify, pkg, env = proc
       if (mac) await checkMac(manual);
       else {
         if (!app.isPackaged && !testFeed) { set({ state: 'unavailable', error: 'Updates only work in the installed app.' }); return { ...state }; }
-        await windowUpdater().checkForUpdates();
+        const result = await windowsUpdater().checkForUpdates();
+        // The library resolves its check before the automatic download finishes. Observe that
+        // promise too, so a checksum/network failure is handled and concurrent checks stay blocked.
+        if (result && result.downloadPromise) await result.downloadPromise;
       }
     } catch (e) {
       log('update check failed: ' + (e && e.message));
-      set({ state: manual || state.state === 'downloading' ? 'error' : 'idle', error: friendly(e), checkedAt: Date.now() });
+      set({ state: manual || state.state === 'downloading' || state.state === 'error' ? 'error' : 'idle', error: friendly(e), checkedAt: Date.now() });
     } finally { busy = false; }
     return { ...state };
   }
@@ -262,7 +265,11 @@ function createUpdater({ app, net, getSettings, sendAll, notify, pkg, env = proc
       if (mac) {
         if (!writable()) return { ok: false, openPage: state.releasesPage, error: 'Atoll cannot replace itself where it is installed. Download the new version instead.' };
         installMac();
-      } else windowUpdater().quitAndInstall(true, true);
+      } else {
+        windowsUpdater().quitAndInstall(true, true);
+        // electron-updater can refuse synchronously by emitting 'error' without throwing.
+        if (state.state === 'error') return { ok: false, error: state.error };
+      }
       return { ok: true };
     } catch (e) { set({ state: 'error', error: friendly(e) }); return { ok: false, error: friendly(e) }; }
   }
