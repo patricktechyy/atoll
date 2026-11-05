@@ -35,7 +35,9 @@ async function gtxOnce(client, q, to, translate, rom) {
   const url = `${ENDPOINT}?client=${client}&sl=auto&tl=${encodeURIComponent(to)}${translate ? '&dt=t' : ''}${rom ? '&dt=rm' : ''}`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8', 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' },
+    // No browser User-Agent: the Rust host's TLS stack is not Chromium's, so a fake "Chrome" header is a mismatch
+    // that makes Google more likely to refuse us. The host's own honest client UA is sent instead.
+    headers: { 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' },
     body: 'q=' + encodeURIComponent(q)
   });
   if (!res.ok) throw Object.assign(new Error(`Translate returned ${res.status}`), { status: res.status });

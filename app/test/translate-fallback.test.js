@@ -10,9 +10,12 @@ const refused = { ok: false, status: 429 };
 (async () => {
   let seen = [];
   global.fetch = async (url) => { const c = new URL(url).searchParams.get('client'); seen.push(c); return answer(c); };
+  let sentHeaders = null;
+  global.fetch = async (url, options) => { sentHeaders = options.headers; const c = new URL(url).searchParams.get('client'); seen.push(c); return answer(c); };
   const first = await translateLines('song-1', ['愛してる'], 'en', []);
   assert.deepEqual(seen, ['dict-chrome-ex'], 'the unthrottled client is tried first');
   assert.equal(first.items[0].tr, 'I love you');
+  assert.ok(!Object.keys(sentHeaders).some((h) => h.toLowerCase() === 'user-agent'), 'no fake browser User-Agent: the host sends its own honest one');
   assert.equal(first.items[0].rom, 'Aishiteru', 'Google romanization is used for lines the local rules cannot read');
 
   // dict-chrome-ex refused -> gtx is used, and is then remembered as the first choice

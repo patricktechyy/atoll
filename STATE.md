@@ -13,6 +13,13 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 - **Windows:** nothing ran. The change is pure shared JS/CSS with no OS branch, but the Windows WebView2 build/test remains unverified. **Electron:** shared renderer (`app.js`, `style.css`) changed; the retained Electron `test:ui` suite was NOT run.
 - Not verified: real-account lyrics with live translation once Google unblocks, the network-failure tooltip in the running app.
 
+### Follow-up: translation still missing on a different network (same 0.12.2)
+
+- User reported no translation on a different network/IP, so the IP block alone did not explain it. Checked on the new IP (119.234.25.96): `curl` with an honest UA gets 200 from the `dict-chrome-ex` client, `gtx` still 429. The real WKWebView's Rust `http` command was verified against an echo service (UTF-8 POST body, headers, 200), settings defaults have translation on.
+- Suspected cause (NOT proven by an A/B): `translate.js` sent a fake Chrome UA copied from the Electron host; with the Rust host's non-Chromium TLS that is a fingerprint mismatch. The A/B was not run because replaying the browser-identifying request against Google was refused by the safety classifier. Removed the header (honest host UA `Atoll/<version>`), added a regression test, and made a refused (partial) song retry after the pause.
+- Verified on macOS: `npm test` passes; signed rebuild passes the 77-assertion WKWebView suite; real `atoll.translate` inside the WebView returned translation + romanization for Korean on the new network. Windows and Electron UI untested. The installed `/Applications/Atoll.app` still has the earlier 0.12.2 build with the fake UA until reinstalled.
+- Also open: the translator relies on the unofficial endpoint and the `dict-chrome-ex` client name; an API key (Google Cloud Translation / DeepL) would be the robust fix.
+
 ## Earlier session: Apple Music lyrics regression fixed (0.12.1)
 
 - Reproduced the reported “HAHAHA” by Juicy Luicy failure in the installed 0.12.0 UI and through the live account API. The Rust `/v1/me/storefront` request omitted the web player's Origin/Referer headers. Apple returned HTTP 401; the code silently kept MusicKit's `us` fallback. The US catalog search found the song, but its lyrics returned HTTP 404. The same connected account resolves to `id`; that storefront returned HTTP 200 with timed TTML for the song.

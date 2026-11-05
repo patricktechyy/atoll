@@ -1077,6 +1077,9 @@
     if (S.lyricsKey !== key || S.translationRequest !== request) return;
     if (!r || !r.ok) { S.trans = null; S.transKey = null; return; }
     S.trans = r.data;
+    // Google refused (translation missing, romanization kept): try this song again once the pause has passed,
+    // instead of waiting for a track change.
+    if (r.data.partial) setTimeout(() => { if (S.lyricsKey === key && S.trans && S.trans.partial) { S.transKey = null; loadTranslation(); } }, 5 * 60 * 1000 + 5000);
     renderLyricsHead();
     renderLyricsList();
     S.lastLayout = ''; layout();
