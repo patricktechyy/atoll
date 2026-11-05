@@ -1,7 +1,7 @@
 {
   "name": "atoll",
   "productName": "Atoll",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "A living Dynamic Island for Windows and macOS: music, lyrics, focus, calendar, notifications and system stats in your notch.",
   "main": "main.js",
   "license": "MIT",
@@ -13,7 +13,7 @@
     "dist:win:dir": "node ../tools/rust.js build --no-bundle",
     "build:mac": "node ../tools/rust.js build",
     "test": "npm run test:unit",
-    "test:unit": "node test/reminders-timing.test.js && node test/lyrics-app-only.test.js && node test/apple-storefront.test.js && node test/understood-languages.test.js && node test/translate-fallback.test.js && node test/updater.test.js && node test/windows-updater.test.js && node test/release-tools.test.js && node test/mac-permissions.test.js && node test/display-safe-area.test.js && node test/rust-contract.test.js",
+    "test:unit": "node test/reminders-timing.test.js && node test/lyrics-app-only.test.js && node test/apple-storefront.test.js && node test/understood-languages.test.js && node test/romanize.test.js && node test/translate-fallback.test.js && node test/updater.test.js && node test/windows-updater.test.js && node test/release-tools.test.js && node test/mac-permissions.test.js && node test/display-safe-area.test.js && node test/rust-contract.test.js",
     "test:ui": "node test/task-time-ui.test.js && node test/display-select.test.js && node test/display-safe-area-ui.test.js && node test/lyrics-ui.test.js && node test/updater-ui.test.js",
     "test:mac": "node test/apple-calendar-ui.test.js && node test/mac-permission-fix.test.js && node ../native/mac/qa/workflows-qa.cjs && node ../native/mac/qa/qa.cjs",
     "test:win": "node test/win-smoke.test.js && node test/windows-updater-ui.test.js",

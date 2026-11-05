@@ -1077,6 +1077,7 @@
     if (S.lyricsKey !== key || S.translationRequest !== request) return;
     if (!r || !r.ok) { S.trans = null; S.transKey = null; return; }
     S.trans = r.data;
+    renderLyricsHead();
     renderLyricsList();
     S.lastLayout = ''; layout();
   }
@@ -1172,6 +1173,10 @@
     const a = $('#ly-art');
     if (artOk()) { if (a.src !== S.art) a.src = S.art; a.style.visibility = ''; } else a.style.visibility = 'hidden';
     const t = $('#m-tr-toggle'); t.innerHTML = I.translate; t.classList.toggle('on', !!st().translateLyrics);
+    // The online translator can refuse this network (rate limit / "unusual traffic"); romanization is local and still shows.
+    const down = !!(S.trans && S.trans.partial && S.transKey === S.lyricsKey);
+    t.classList.toggle('unavailable', down);
+    t.title = down ? 'Translation unavailable: Google is refusing requests from this network right now. Romanization still works. Try again later.' : 'Translation';
   }
   $('#m-tr-toggle').addEventListener('click', () => {
     st().translateLyrics = !st().translateLyrics; save('settings'); renderLyricsHead();

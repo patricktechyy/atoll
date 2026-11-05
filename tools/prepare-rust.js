@@ -19,6 +19,7 @@ expose('lyrics.js','// ---- caches','cleanTitle,stripFeat,cleanAlbum');
 expose('calendar.js','async function fetchCalendar','parseIcs,expand');
 expose('lyrics-sources.js','// ---------------- Electron side','pickSpotifyTrack,spotifyToResult,pickAppleSong,parseTtml');
 expose('media.js','module.exports','normalizeMedia,fixArtData,pickItunesArt');
+expose('romanize.js','module.exports','romanizeLine');
 expose('translate.js','module.exports','translateLines,fixLanguage');
 const todo=fs.readFileSync(path.join(root,'app/src/todolist.js'),'utf8');pure+=`(()=>{${todo.slice(todo.indexOf('function quickParse'),todo.indexOf('// Plain Node fetch'))}Object.assign(window.AtollPure,{quickParse});})();`;
 fs.writeFileSync(path.join(out,'rust-pure.js'),pure);

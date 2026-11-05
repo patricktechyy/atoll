@@ -29,6 +29,6 @@ global.fetch = async (url, options) => {
   };
   const romanized = await translateLines('japanese', ['こんにちは'], 'en', ['ja']);
   assert.equal(romanized.items[0].tr, '');
-  assert.equal(romanized.items[0].rom, 'konnichiwa', 'romanization is preserved');
+  assert.equal(romanized.items[0].rom, 'Konnichiwa', 'romanization is preserved (local)');
   console.log('Language exclusions, cache changes, regional codes and romanization passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

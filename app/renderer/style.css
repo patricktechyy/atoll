@@ -178,6 +178,7 @@ body.nogpu .layer, body.nogpu .page { filter: none !important; }
 .chip-btn:active { transform: scale(.94); }
 .chip-btn.on { color: var(--bg); background: var(--fg); }
 .chip-btn svg { width: 14px; height: 14px; }
+.chip-btn.unavailable { opacity: .45; text-decoration: line-through; }
 .corner-btn { position: absolute; left: 0; top: 0; z-index: 5; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: var(--fg3); opacity: 0; transition: opacity .2s, background .15s, color .15s; }
 .corner-btn svg { width: 15px; height: 15px; }
 #island.state-panel:hover #gear { opacity: 1; }

@@ -75,6 +75,7 @@
   const result=await api.getLyrics({title:'Unsupported player'});assert(result.unsupported||result.needsConnect||result.error||result.service,'lyrics route only to current player');
   assert(window.AtollPure.quickParse('call mum tomorrow 8pm').time==='20:00','natural-language tasks preserved');
   assert(window.AtollPure.fixLanguage('en',['這是一首中文歌曲'])==='zh','Traditional Chinese language correction preserved');
+  assert(window.AtollPure.romanizeLine('너를 사랑해')==='Neoreul saranghae'&&window.AtollPure.romanizeLine('こんにちは')==='Konnichiwa'&&window.AtollPure.romanizeLine('愛してる')===null,'local romanization works in the WebView');
   if(window.__ATOLL_RUNTIME__.testFeed){
     const up=await api.updater.check();assert(up.state==='uptodate','Rust update feed check');
     await call('http',window.__ATOLL_RUNTIME__.testFeed+'/test/corrupt',{});

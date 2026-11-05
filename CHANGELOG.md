@@ -2,6 +2,12 @@
 
 Each release needs a `## <version>` section. It becomes the GitHub release notes and the in-app "What's new".
 
+## 0.12.2 - 2026-11-05
+
+- Fixed lyric translation and romanization silently showing nothing. Google's free translate endpoint can refuse a whole network ("unusual traffic" / HTTP 429), and one refusal used to discard the romanization together with the translation. Romanization now runs locally and offline in the shared interface, on both Windows and macOS, and no longer depends on Google for Korean, Japanese kana, Russian/Ukrainian and Greek. Lines it cannot read (kanji, Chinese, Thai, Arabic…) still use Google's romanization when it is reachable.
+- Korean romanization now uses the official Revised Romanization with real pronunciation rules (liaison, nasalization, ㄹ assimilation, aspiration, palatalization): "neoreul saranghae", "gachi", "annyeonghaseyo" instead of Google's "neoleul salanghae".
+- When Google refuses requests, Atoll now pauses requests for five minutes instead of repeating them, keeps showing the romanization, and dims the translation button with a tooltip explaining why.
+
 ## 0.12.1 - 2026-11-05
 
 - Fixed Apple Music lyrics incorrectly reporting that a song has no lyrics after the Rust migration, on both Windows and macOS. The account storefront request now sends the same authenticated player headers as search and lyrics, refreshes expired sessions, and reports lookup failures instead of silently searching MusicKit's fallback US catalog. Verified the reported “HAHAHA” by Juicy Luicy against the connected account's Indonesian storefront.

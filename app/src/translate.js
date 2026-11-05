@@ -1,6 +1,11 @@
-// Lyric translation + romanization (romaji, pinyin, romanized Korean…) through Google Translate's
-// free web endpoint (the one browser extensions use; no API key). It's unofficial, so it can rate
-// limit; we translate a whole song in one request and cache it.
+// Lyric translation through Google Translate's free web endpoint (the one browser extensions use; no
+// API key). It's unofficial, so it can rate limit or block a network outright; we translate a whole song
+// in one request and cache it.
+// Romanization is LOCAL first (./romanize: Korean, kana, Cyrillic, Greek). Google's romanization is only
+// requested for lines the local rules cannot read (kanji, Chinese, Thai, Arabic…), and a Google failure
+// never removes the local romanization.
+// In the Rust host there is no require(): the build exposes romanize.js as window.AtollPure.romanizeLine.
+const romanizeLine = typeof require === 'function' ? require('./romanize').romanizeLine : window.AtollPure.romanizeLine;
 const cache = new Map();
 const ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
 
@@ -20,26 +25,34 @@ function parseGtx(data) {
 // fall back to `gtx` if it is refused. Whichever works last is remembered for the next call.
 const CLIENTS = ['dict-chrome-ex', 'gtx'];
 
-async function gtxOnce(client, q, to, translate) {
-  const url = `${ENDPOINT}?client=${client}&sl=auto&tl=${encodeURIComponent(to)}${translate ? '&dt=t' : ''}&dt=rm`;
+// When every client is refused (Google answers 429 / a "unusual traffic" captcha for a blocked network),
+// stop asking for a while: hammering a blocked endpoint only prolongs the block.
+const COOLDOWN_MS = 5 * 60 * 1000;
+let blockedUntil = 0;
+const resetRateLimit = () => { blockedUntil = 0; };
+
+async function gtxOnce(client, q, to, translate, rom) {
+  const url = `${ENDPOINT}?client=${client}&sl=auto&tl=${encodeURIComponent(to)}${translate ? '&dt=t' : ''}${rom ? '&dt=rm' : ''}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8', 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' },
     body: 'q=' + encodeURIComponent(q)
   });
-  if (!res.ok) throw new Error(`Translate returned ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(`Translate returned ${res.status}`), { status: res.status });
   return parseGtx(await res.json());
 }
 
-async function gtx(q, to, translate = true) {
+async function gtx(q, to, translate = true, rom = true) {
+  if (Date.now() < blockedUntil) throw Object.assign(new Error('Translate returned 429 (paused after being refused)'), { status: 429 });
   let lastError;
   for (const client of [...CLIENTS]) {
     try {
-      const out = await gtxOnce(client, q, to, translate);
+      const out = await gtxOnce(client, q, to, translate, rom);
       if (CLIENTS[0] !== client) { CLIENTS.splice(CLIENTS.indexOf(client), 1); CLIENTS.unshift(client); }
       return out;
     } catch (error) { lastError = error; }
   }
+  if (lastError && [403, 429].includes(lastError.status)) blockedUntil = Date.now() + COOLDOWN_MS;
   throw lastError;
 }
 
@@ -91,27 +104,47 @@ async function translateLines(key, lines, to = 'en', understoodLanguages = []) {
   const items = lines.map(() => ({ tr: '', rom: '' }));
   if (!src.length) return { lang: '', items, same: true };
 
-  // Detect without asking for translated text when the user has exclusions.
-  // Romanization remains available even for a language they understand.
-  const detected = understood.length ? await gtx(src.join('\n'), to, false) : null;
-  const skipped = !!detected && understood.includes(baseLanguage(fixLanguage(detected.lang, src)));
-  const whole = skipped ? detected : await gtx(src.join('\n'), to);
+  // Local romanization: string when the rules can read the line, null when they cannot (e.g. kanji).
+  const local = src.map((s) => (isLatin(s) ? '' : romanizeLine(s)));
+  const needRemoteRom = src.some((s, i) => !isLatin(s) && local[i] === null);
+  const hasLocalRom = local.some((r) => r);
+
+  let whole = null, skipped = false, remoteError = null;
+  try {
+    // Detect without asking for translated text when the user has exclusions.
+    // Romanization remains available even for a language they understand.
+    const detected = understood.length ? await gtx(src.join('\n'), to, false, needRemoteRom) : null;
+    skipped = !!detected && understood.includes(baseLanguage(fixLanguage(detected.lang, src)));
+    whole = skipped ? detected : await gtx(src.join('\n'), to, true, needRemoteRom);
+  } catch (error) { remoteError = error; }
+
+  if (remoteError) {
+    // Google refused (rate limit / blocked network). Keep the local romanization; only the translation is lost.
+    if (!hasLocalRom) throw remoteError;
+    const lang = fixLanguage('', src);
+    skipped = !!lang && understood.includes(baseLanguage(lang));
+    idx.forEach((li, k) => { items[li] = { tr: '', rom: local[k] && local[k].toLowerCase() !== src[k].toLowerCase() ? local[k] : '' }; });
+    return { lang, skipped, items, same: !!lang && baseLanguage(lang) === baseLanguage(to), partial: true, error: String(remoteError.message || remoteError) };
+  }
+
   let tr = splitLines(whole.text);
   let rom = whole.rom ? splitLines(whole.rom) : [];
-  if ((!skipped && tr.length !== src.length) || (src.some(s => !isLatin(s)) && (rom.length !== src.length || rom.some((r,i) => !r && !isLatin(src[i]))))) {
+  const romBad = () => needRemoteRom && src.some((s, i) => local[i] === null && (rom.length !== src.length || !rom[i]));
+  if ((!skipped && tr.length !== src.length) || romBad()) {
     // the service merged or split lines: fall back to one request per line (4 at a time)
     tr = new Array(src.length).fill(''); rom = new Array(src.length).fill('');
     for (let i = 0; i < src.length; i += 4) {
-      const batch = await Promise.all(src.slice(i, i + 4).map((s) => gtx(s, to, !skipped).catch(() => ({ text: '', rom: '' }))));
+      const batch = await Promise.all(src.slice(i, i + 4).map((s) => gtx(s, to, !skipped, needRemoteRom).catch(() => ({ text: '', rom: '' }))));
       batch.forEach((r, k) => { tr[i + k] = r.text.trim(); rom[i + k] = (r.rom || '').trim(); });
     }
   }
   if (rom.length !== src.length) rom = [];
   idx.forEach((li, k) => {
     const t = tr[k] || '';
+    const r = local[k] !== null && local[k] !== undefined ? local[k] : rom[k];
     items[li] = {
       tr: skipped ? '' : t.toLowerCase() === src[k].toLowerCase() ? '' : t,
-      rom: rom[k] && !isLatin(src[k]) && rom[k].toLowerCase() !== src[k].toLowerCase() ? rom[k] : ''
+      rom: r && !isLatin(src[k]) && r.toLowerCase() !== src[k].toLowerCase() ? r : ''
     };
   });
   const lang = fixLanguage(whole.lang, src);
@@ -121,4 +154,4 @@ async function translateLines(key, lines, to = 'en', understoodLanguages = []) {
   return out;
 }
 
-module.exports = { translateLines, parseGtx, fixLanguage, CLIENTS };
+module.exports = { translateLines, parseGtx, fixLanguage, CLIENTS, resetRateLimit };
