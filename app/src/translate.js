@@ -31,8 +31,10 @@ const COOLDOWN_MS = 5 * 60 * 1000;
 let blockedUntil = 0;
 const resetRateLimit = () => { blockedUntil = 0; };
 
+// A request with no `dt` at all gets an EMPTY answer with no detected language, so a detection-only call
+// (translate=false) always asks for `rm`: that is what makes Google return the language.
 async function gtxOnce(client, q, to, translate, rom) {
-  const url = `${ENDPOINT}?client=${client}&sl=auto&tl=${encodeURIComponent(to)}${translate ? '&dt=t' : ''}${rom ? '&dt=rm' : ''}`;
+  const url = `${ENDPOINT}?client=${client}&sl=auto&tl=${encodeURIComponent(to)}${translate ? '&dt=t' : ''}${rom || !translate ? '&dt=rm' : ''}`;
   const res = await fetch(url, {
     method: 'POST',
     // No browser User-Agent: the Rust host's TLS stack is not Chromium's, so a fake "Chrome" header is a mismatch
