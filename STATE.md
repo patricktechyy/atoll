@@ -24,7 +24,7 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 
 - User screenshot: Chinese lyric showed pinyin but no English. Their settings have `understoodLanguages: ['en','id']`, which makes `translateLines` send a detection-only request first. When I made `dt=rm` optional, that request went out with no `dt` at all; real Google answers `[null,null,"",…]` (empty, no language), `parseGtx` threw, the whole remote call was treated as failed (`partial`), and only local romanization survived. Unit mocks always returned a valid reply, so it passed. Fix: detection (translate=false) always sends `dt=rm`.
 - Regression test in `understood-languages.test.js` uses a faithful Google mock (empty answer without `dt`); verified it FAILS with the bug restored and passes with the fix. Real WKWebView probe with the user's settings: the screenshot's line returns "Fantasy about castles and colorful swirls" + pinyin; Korean also translates. `npm test` and the 77-assertion WebView suite pass on the signed rebuild. Windows/Electron UI untested.
-- The installed app (23:11 build) still contains this bug until reinstalled.
+- **Installed on this Mac at the user's request (2026-11-05 23:15):** graceful quit, backup of previous app and full profile to `../Backups/Atoll-0.12.2-before-detection-fix-20261105-231552/`, install via verified staging copy; installed binary SHA-256 matches the tested signed build, deep/strict signature valid, app and helper running, settings JSON intact (understoodLanguages unchanged). Not yet confirmed by the user with a real song.
 
 ## Earlier session: Apple Music lyrics regression fixed (0.12.1)
 
