@@ -3,6 +3,10 @@
 A living Dynamic Island for **Windows and macOS**: music with synced lyrics, timers, calendar, notifications, files,
 clipboard history and system stats in your notch. Electron app, one codebase.
 
+On a MacBook with a camera notch, Atoll stays joined to it: compact content sits in the visible wings,
+and expanded pages grow down with their content below the camera. The layout adapts to the selected
+display, so external monitors use the usual layout.
+
 ## Install
 
 - **Windows:** download `Atoll-Setup-<version>.exe` from the latest [Release](../../releases/latest) and run it. Windows SmartScreen may warn because the installer is not code-signed: choose More info → Run anyway.

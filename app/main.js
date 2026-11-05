@@ -17,6 +17,7 @@ const { getLyrics, setDiskCache: setLyricsCache, forgetMisses, lyricsStatus } = 
 const { createSources } = require('./src/lyrics-sources');
 const { createUpdater } = require('./src/updater');
 const { capabilities } = require('./src/platform');
+const { displayCutout, windowCutout } = require('./src/display-safe-area');
 const { resetPermission } = require('./src/mac-permissions');
 const { fetchCalendar } = require('./src/calendar');
 const { startNotifyServer } = require('./src/notify-server');
@@ -142,6 +143,7 @@ function displayMenu() {
 // near a side or the bottom the island is drawn off-centre inside the window instead.
 function placeWindow() {
   if (!win) return;
+  if (toastWin && !toastWin.isDestroyed()) placeToast(toastPosition);
   const d = targetDisplay();
   const pos = settings().position || {};
   if (pos.mode === 'side') { // standing on the left or right edge
@@ -164,7 +166,9 @@ function placeWindow() {
   win.setBounds({ x, y, width: w, height: h });
   offset = (cx - (x + w / 2)) / zoom;
   islandTop = (d.bounds.y + top - y) / zoom;
-  send('place', { mode: 'top', offset, top: islandTop, floating: top > 0 });
+  // Keep the shape attached to the screen edge. The renderer reserves the real camera rectangle
+  // inside that shape, with wings beside it and panel content below it, instead of moving the window.
+  send('place', { mode: 'top', offset, top: islandTop, floating: top > 0, cutout: windowCutout(d, { x, y }, zoom) });
 }
 
 function setHidden(reason, on) {
@@ -205,7 +209,7 @@ function createWindow() {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'), { query: DEMO ? { demo: '1' } : {} });
-  win.webContents.on('did-finish-load', () => { applySize(); send('place', { offset }); });
+  win.webContents.on('did-finish-load', () => applySize());
   win.once('ready-to-show', () => win.showInactive());
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e) => e.preventDefault());
@@ -760,7 +764,8 @@ function wireIpc() {
     if (!n || hiddenFor.has('user') || hiddenFor.has('capture') || hiddenFor.has('shot')) { send('toast-event', { id: n && n.id, type: 'done' }); return; }
     ensureToast();
     placeToast(n.pos);
-    if (toastReady) toastWin.webContents.send('toast', n); else toastPending = n;
+    const message = { ...n, cameraInset: toastInset };
+    if (toastReady) toastWin.webContents.send('toast', message); else toastPending = message;
     toastWin.showInactive();
     toastWin.setAlwaysOnTop(true, 'screen-saver');
     toastWin.moveTop();
@@ -791,6 +796,8 @@ function wireIpc() {
 // A small second window; it shares the notch's renderer process, so it costs very little.
 const TOAST_W = 520, TOAST_H = 150;
 let toastWin = null, toastReady = false, toastPending = null, toastIdleT = null;
+let toastPosition = 'top-center';
+let toastInset = 0;
 function ensureToast() {
   if (toastWin && !toastWin.isDestroyed()) return toastWin;
   toastReady = false;
@@ -808,15 +815,22 @@ function ensureToast() {
   return toastWin;
 }
 function placeToast(where) {
+  toastPosition = where;
   const d = targetDisplay(), wa = d.workArea || d.bounds;
   const W = Math.round(TOAST_W * zoom), H = Math.round(TOAST_H * zoom);
   const cx = Math.round(d.bounds.x + (d.bounds.width - W) / 2);
   const right = wa.x + wa.width - W, bottom = wa.y + wa.height - H;
+  const camera = displayCutout(d);
+  const top = d.bounds.y, cornerTop = Math.max(wa.y, top + (camera?.height || 0));
+  toastInset = where === 'top-center' && camera ? Math.ceil(camera.height / zoom) + 6 : 0;
   const xy = {
-    'top-center': [cx, d.bounds.y], 'top-left': [wa.x, wa.y], 'top-right': [right, wa.y],
+    'top-center': [cx, top], 'top-left': [wa.x, cornerTop], 'top-right': [right, cornerTop],
     'bottom-left': [wa.x, bottom], 'bottom-center': [cx, bottom], 'bottom-right': [right, bottom]
-  }[where] || [cx, d.bounds.y];
+  }[where] || [cx, top];
   toastWin.setBounds({ x: xy[0], y: xy[1], width: W, height: H });
+  toastWin.webContents.setZoomFactor(zoom);
+  if (toastPending) toastPending.cameraInset = toastInset;
+  toastWin.webContents.send('toast-place', { cameraInset: toastInset });
 }
 
 function applyFullscreen() {

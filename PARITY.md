@@ -5,7 +5,7 @@ change is one-sided, with the reason. `app/src/platform.js` (`capabilities()`) i
 
 | Feature | Windows | macOS | Notes |
 | --- | --- | --- | --- |
-| Notch UI, layouts, themes, positions | yes | yes | Shared renderer. macOS draws under the camera notch; Windows draws at the top edge. |
+| Notch UI, layouts, themes, positions | yes | yes | Shared renderer. macOS reads the selected display's camera rectangle (NSScreen safe area + auxiliary top areas), keeping the shape joined to the notch: compact wings beside the camera and expanded content below it. External/notch-free screens keep normal placement. Windows draws at the top edge. Saved positions are preserved. |
 | Show notch on a chosen monitor | yes | yes | Settings → Appearance → Position, and the right-click menu. |
 | Lyrics (Spotify / Apple Music, own account only) | yes | yes | No third-party lyric sites. Apple storefront is resolved from the account. |
 | Music control and position | Windows media sessions, Apple Music via UI Automation | Music and Spotify via AppleScript | Players differ by design; macOS covers only Music and Spotify. |

@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <style>
     html, body { background: transparent; }
-    #card { position: absolute; width: 420px; height: 78px; opacity: 0; }
+    #card { position: absolute; width: 420px; height: calc(78px + var(--camera-inset, 0px)); opacity: 0; }
     #card.img { width: 460px; }
     #card .cshell { position: absolute; inset: 0; background: var(--bg); border-radius: 24px; overflow: hidden; box-shadow: var(--shadow); }
     #card .ear { display: none; }
@@ -22,7 +22,7 @@
     #card.img.p-bottom-center { margin-left: -230px; }
     #card.p-bottom-right { bottom: 14px; right: 12px; }
     #card.p-bottom-left { bottom: 14px; left: 12px; }
-    #notif { position: absolute; inset: 0; }
+    #notif { position: absolute; inset: var(--camera-inset, 0px) 0 0; }
     #bar { position: absolute; left: 22px; right: 22px; bottom: 6px; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--fg) 10%, transparent); overflow: hidden; }
     #bar i { display: block; height: 100%; width: 100%; background: color-mix(in srgb, var(--accent) 70%, transparent); transform-origin: left; }
   </style>

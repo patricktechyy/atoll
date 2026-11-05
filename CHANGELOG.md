@@ -2,6 +2,10 @@
 
 Each release needs a `## <version>` section. It becomes the GitHub release notes and the in-app "What's new".
 
+## 0.11.5 - 2026-11-05
+
+- Mac: Atoll stays joined to the physical MacBook notch and now adapts to its measured camera housing. Compact activities and HUD controls sit in visible wings beside the camera; expanded pages, notifications and move controls grow out of the same connected shape with their content below the camera. Camera dimensions stay correct at every Atoll size. External and notch-free displays keep the usual layout, and switching screens or reconnecting them updates the layout automatically. Saved positions are preserved.
+
 ## 0.11.4 - 2026-11-04
 
 - Mac: fixed the notch saying "not playing" after you change song in Apple Music, until you restarted Atoll or used Fix permission. Music can answer slowly while it loads the next song; one slow answer used to switch detection off for 60 seconds. Atoll now retries within about a second and, meanwhile, keeps showing the current song instead of "not playing". Only a refused permission still waits longer. Loading the cover art also can no longer freeze detection.

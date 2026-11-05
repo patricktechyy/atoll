@@ -2,7 +2,20 @@
 
 Rewritten at the end of every session. Read it first; clear items from "Needs verifying" when you verify them.
 
-**Last updated:** 2026-11-04, macOS (Claude Sonnet 5.5). Version in the repo: 0.11.4 (0.11.0 and 0.11.1 released; 0.11.2–0.11.4 are not released yet).
+**Last updated:** 2026-11-05, macOS (Codex). Version in the repo: 0.11.5, committed locally only. Latest fetched tag: v0.11.4; 0.11.5 has not been pushed or released.
+
+## Latest session: integrated physical MacBook notch (0.11.5)
+
+- User requirement: keep Atoll merged with the hardware camera notch. Do not automatically move the island down into a detached, fully rounded pill.
+- Native `screenSafeAreas()` in `native/mac/platform.m` returns the selected display's camera height, left edge and width using NSScreen safeAreaInsets + auxiliary top areas, matched by display ID. All measurements are points, not Retina pixels. This Mac reports left 663.5, width 185, height 32 at 1512×982.
+- `app/src/display-safe-area.js` validates native geometry and projects it into the actual window's CSS coordinates at each zoom. On native failure only the internal display conservatively reserves its entire top row. External/notch-free displays and Windows have no camera reserve.
+- `app/main.js` keeps the window at the physical top edge, sends camera geometry with placement, and no longer sends an incomplete second placement on reload (which reset mode/position metadata). Camera adjustment does not change saved positions.
+- Shared renderer: compact activities and HUDs reserve a central camera gap; long titles are clipped/ellipsized within their visible wings. Lyrics begin below the camera-height row. Pages/Tabs, notifications and move controls extend the SAME connected shape downward, reserving an empty camera header before content. Minimal/mascot modes also respect camera geometry. Side layouts retain their existing behavior.
+- Separate top-centre notifications remain attached at the screen edge, with text below the camera. Visible notifications follow monitor/size changes without restarting their timer.
+- Regression tests: `app/test/display-safe-area.test.js` (unit) and `app/test/display-safe-area-ui.test.js` (shared packaged UI). They cover camera dimensions/IDs, S/M/L, HUD wings and long meeting titles, both layouts and five pages, reload, notifications, move controls, external/no-notch displays, metrics and disconnect fallback. Windows runs the same UI scenarios with camera adaptation disabled.
+- Verified on macOS arm64: `npm test`; `ATOLL_APP="$PWD/dist/Atoll-0.11.5-notch.app" npm run test:ui` (all shared tests, including the new integrated-notch coverage and updater end-to-end); Apple Calendar UI and Mac permission-fix tests; `native/mac/qa/workflows-qa.cjs` and `native/mac/qa/qa.cjs` with that app path. The final QA completed 12 settings cycles, 20 notch cycles, 60 s idle and clean helper shutdown. Median/p95 animation callbacks: 8.3/9.3 ms; renderer heap after 20 cycles grew by ~106 KiB. Windows was not run. Signature verification passed during the certificate-signed build.
+- Final app: `dist/Atoll-0.11.5-notch.app`, built from source and signed with the same local Apple Development certificate as 0.11.4. Earlier experimental 0.11.5 builds were removed; only the final connected-notch build is retained. The installed app was not replaced. Certificate identity is stable, but persistence of existing real privacy grants across this update still needs human verification.
+- Repository housekeeping: `git pull --ff-only` succeeded (needed network access outside the sandbox). The unrelated nested `atoll/` repo contains only `.gitattributes`, no app work; it was preserved and added to this checkout's `.git/info/exclude` only. No shared ignore change and no push.
 
 ## Latest session: notch says "not playing" after changing song in Apple Music (0.11.4)
 
@@ -32,7 +45,7 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 - Carried over all changes made on the Mac up to 0.10.11: Apple Calendar (EventKit), lyrics only from the playing app (LRCLIB/NetEase removed), Apple storefront fix, Mac window-button spacing in Setup/Settings, monitor selector, side-mode "open Tasks" fix.
 - Tests made portable (shared launcher `app/test/launch.js`; they run the built app on either OS). `package.json` test scripts now list only files that exist.
 
-## Verified (macOS, this session)
+## Earlier verification (macOS, before 0.11.5)
 
 - `npm test` (unit), and `npm run test:ui` + `node app/test/apple-calendar-ui.test.js` + `native/mac/qa/workflows-qa.cjs` + `native/mac/qa/qa.cjs` against `dist/Atoll.app` built with `native/mac/build.sh`.
 - Updater end to end on macOS against a local fake feed: verified update installs and relaunches as the new version; a corrupted download is refused; a read-only install falls back to the releases page.
@@ -48,6 +61,9 @@ Rewritten at the end of every session. Read it first; clear items from "Needs ve
 - `app/test/reminders-settings-ui.test.js` is a leftover browser-level test needing a Chrome path; not in any suite. Decide to fix or delete.
 
 ## Needs verifying on macOS
+
+- Physical external-display switching/closed-lid use for 0.11.5: integration tests simulate displays, display metrics and removal; no real external monitor was available. Human visual acceptance on the built-in camera notch remains useful, especially custom off-centre positions and fullscreen Spaces.
+- Legacy `npm run test:mac` does not pass ATOLL_APP to workflows-qa.cjs/qa.cjs; invoke those two scripts with the app path as a positional argument (as CI does). This pre-existing test-command mismatch was not changed.
 
 - Real Apple Music and Spotify lyric fetching with signed-in accounts (verified once by hand at 0.10.9 for Apple Music).
 - Real Apple Calendar permission grant and real events (UI is tested with a stubbed reader; the EventKit query runs unauthorized in tests).

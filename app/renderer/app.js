@@ -30,7 +30,7 @@
     lastHoverAt: Date.now(), startedAt: Date.now(), lastWaterNudge: Date.now(),
     waterUndo: [], icons: new Map(), lastLayout: '', peek: false,
     remote: { tasks: [], error: null, loading: false, at: 0 }, snoozed: new Map(),
-    offset: 0, top: 0, floating: false, moving: false, mode: 'top', side: 'right', center: 330,
+    offset: 0, top: 0, floating: false, cutout: null, moving: false, mode: 'top', side: 'right', center: 330,
     trans: null, transKey: null, clips: [], cbSel: 0, swX: 0, swY: 0, swAt: 0, wingKey: { l: '', r: '', u: '' }
   };
   const measurer = document.createElement('div'); measurer.id = 'c-measure'; document.body.appendChild(measurer);
@@ -185,6 +185,26 @@
     const cls = [];
     const acts = activities();
     let state, w, h, r, primary = null;
+    const camera = S.cutout;
+    const center = window.innerWidth / 2 + S.offset;
+    const rowBottom = camera ? Math.max(0, camera.y + camera.height - S.top) : 0;
+    const overlapsCamera = (width) => {
+      if (!camera || !rowBottom) return false;
+      const left = Math.round(Math.max(12, Math.min(window.innerWidth - width - 12, center - width / 2)));
+      return left < camera.x + camera.width && left + width > camera.x;
+    };
+    const wing = S.hud?.wing || acts[0]?.wing || (s.mascot ? 32 : 0);
+    const compactWidth = Math.max(196 + wing * 2, acts[0]?.under ? 420 : 0);
+    const compactCamera = overlapsCamera(compactWidth);
+    const gap = camera ? Math.ceil(camera.width + 2 * Math.abs(camera.x + camera.width / 2 - center) + 16) : 196;
+    // The physical housing never scales with Atoll. Reserve its measured width in CSS pixels
+    // so album art, text and HUD controls stay in the two visible wings at every zoom level.
+    const wingsFit = compactCamera && gap + wing * 2 <= window.innerWidth - 24;
+    NOTCH.w = wingsFit ? Math.max(196, gap) : 196;
+    NOTCH.h = wingsFit ? Math.max(32, Math.ceil(rowBottom) + 4) : 32;
+    root.style.setProperty('--wing-h', NOTCH.h + 'px');
+    root.style.setProperty('--camera-gap', NOTCH.w + 'px');
+    root.style.setProperty('--under-top', (NOTCH.h + 2) + 'px');
 
     if (S.moving) { state = 'mover'; w = 300; h = 46; r = 23; }
     else if (S.notif) { state = 'notif'; w = S.notif.image ? 440 : 400; h = 84; r = 30; }
@@ -203,14 +223,19 @@
       }
       renderCompact(primary);
     } else {
-      state = 'compact'; w = NOTCH.w; h = NOTCH.h; r = 12; cls.push('idle');
+      state = 'compact'; w = NOTCH.w + (wingsFit && s.mascot ? 64 : 0); h = NOTCH.h; r = 12; cls.push('idle');
       renderCompact(null);
-      if (s.minimal) { w = 150; h = 6; r = 3; cls.push('minimal'); }
+      if (s.minimal) { w = wingsFit ? NOTCH.w : 150; h = wingsFit ? NOTCH.h : 6; r = wingsFit ? 12 : 3; cls.push('minimal'); }
     }
     if (S.peek && state === 'compact') cls.push('peek');
     if (isTabs()) cls.push('tabs');
     // hover: the notch swells a little (Alcove: ~9% wider, +5 px), content stays put
     const base = { w, h };
+    // Grow the SAME edge-attached shape around an empty camera header. Only the content moves
+    // below the housing; the shell, ears and spring still start at the physical screen edge.
+    const contentTop = overlapsCamera(w) && (['panel', 'notif', 'mover'].includes(state) || !wingsFit) ? Math.ceil(rowBottom) + 6 : 0;
+    h += contentTop;
+    if (overlapsCamera(w)) cls.push('camera');
     if (S.hover && !S.buttonsOut && (state === 'compact' || state === 'hud') && !S.expanded && !S.moving && !cls.includes('minimal')) { cls.push('breathe'); w += 18; h += 5; }
     const x = Math.round(Math.max(12, Math.min(window.innerWidth - w - 12, window.innerWidth / 2 + S.offset - w / 2)));
     const y = Math.round(Math.max(0, Math.min(S.top, window.innerHeight - h - 8)));
@@ -221,7 +246,7 @@
     const edge = state === 'compact' && S.peek && !S.floating;
     const hw = edge ? Math.max(w, 420) : w;
     const hit = { x: Math.max(0, x + w / 2 - hw / 2), y, w: hw + (second ? 40 : 0), h: edge ? 6 : Math.max(h, 12) };
-    applyGeom(state, w, h, r, x, y, cls, hit, second, base);
+    applyGeom(state, w, h, r, x, y, cls, hit, second, base, contentTop);
   }
 
   // One spring system drives the whole shape (position, size, corners, ears, shadow), so everything moves
@@ -264,11 +289,11 @@
   // the shape's current rectangle (tests, dragging)
   const shapeRect = () => { const g = geo.get(); return { x: g.x, y: g.y, width: g.w, height: g.h }; };
 
-  function applyGeom(state, w, h, r, x, y, cls, hit, second, base = { w, h }) {
+  function applyGeom(state, w, h, r, x, y, cls, hit, second, base = { w, h }, contentTop = 0) {
     // bubble
     bubble.classList.toggle('on', !!second);
     bubble.classList.toggle('floating', S.floating);
-    if (second) { setHtml($('#b-in'), second.b); bubble.style.left = (x + w + 8) + 'px'; bubble.style.top = y + 'px'; }
+    if (second) { setHtml($('#b-in'), second.b); bubble.style.left = (x + w + 8) + 'px'; bubble.style.top = (y + contentTop) + 'px'; }
     const key = [state, w, h, x, y, ...cls, second ? second.kind : ''].join('|');
     if (key === S.lastLayout) return;
     S.lastLayout = key;
@@ -292,7 +317,7 @@
     if (state === 'panel' && S.mode !== 'side') { const e = isTabs() ? TABS_SIZE : PANEL_ENVELOPE; lw = e.w; lh = e.h; }
     const cx = x + w / 2, cy = y + h / 2;
     const ax = S.mode === 'side' ? (S.side === 'left' ? Math.round(x) : Math.round(x + w - lw)) : Math.round(cx - lw / 2);
-    const ay = S.mode === 'side' ? Math.round(cy - lh / 2) : Math.round(y);
+    const ay = S.mode === 'side' ? Math.round(cy - lh / 2) : Math.round(y + contentTop);
     if (state !== prev || layer.__ax !== ax || layer.__ay !== ay || layer.__lw !== lw || layer.__lh !== lh) {
       layer.__ax = ax; layer.__ay = ay;
       layer.__lw = lw; layer.__lh = lh;
@@ -304,7 +329,7 @@
     if (state === 'panel') { // page dots, gear and tips sit on the panel's final edges; the shape reveals them
       const dr = $('#dots-row').style; dr.left = x + 'px'; dr.width = w + 'px'; dr.top = (y + h - 34) + 'px';
       const gr = $('#gear').style; gr.left = (x + w - 36) + 'px'; gr.top = (y + h - 39) + 'px';
-      const tp = $('#panel-tip').style; tp.left = (x + w / 2) + 'px'; tp.top = (y + 10) + 'px';
+      const tp = $('#panel-tip').style; tp.left = (x + w / 2) + 'px'; tp.top = (y + contentTop + 10) + 'px';
     }
     if (state === 'panel') placePages(cx, ax);
     for (const id of ['compact', 'hud', 'notif', 'panel', 'mover', 'side']) $('#' + id).classList.toggle('on', id === state);
@@ -340,6 +365,7 @@
     return { w: Math.max(300, Math.min(560, p.w || 380)), h: Math.max(300, Math.min(window.innerHeight - 16, p.h || 480)) };
   };
   function layoutSide() {
+    root.style.setProperty('--wing-h', '32px');
     const playing = S.media.active && S.media.playing;
     const cls = ['side', 'side-' + S.side];
     if (isTabs()) cls.push('tabs');
@@ -870,6 +896,7 @@
     p = p || {};
     const was = S.mode;
     S.mode = p.mode === 'side' ? 'side' : 'top';
+    S.cutout = S.mode === 'top' ? p.cutout || null : null;
     if (S.mode === 'side') { S.side = p.side === 'left' ? 'left' : 'right'; S.center = p.center || 330; S.floating = (p.inset || 0) > 0; }
     else { S.offset = p.offset || 0; S.top = p.top || 0; S.floating = !!p.floating; }
     if (was !== S.mode) { applyLayoutDom(); if (!pagesFor().includes(S.page)) S.page = choosePage(); renderNav(); if (S.expanded) renderPanel(true); }

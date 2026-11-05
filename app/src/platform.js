@@ -8,6 +8,7 @@ function capabilities(platform = process.platform) {
     appleCalendar: mac,                       // EventKit; Windows uses an iCal (ICS) link
     icsCalendar: true,
     screenPermission: mac,                    // macOS asks for Screen Recording / Accessibility
+    displaySafeArea: mac,                     // NSScreen camera-cutout geometry, per selected display
     nativeMediaPlayers: mac ? ['Music', 'Spotify'] : ['Apple Music', 'Spotify', 'any Windows media session'],
     updateMechanism: mac ? 'custom' : 'electron-updater',
     installsOnQuit: !mac                      // Windows installs a downloaded update when Atoll quits; Mac only on Restart

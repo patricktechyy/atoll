@@ -16,6 +16,10 @@
     return [{ transform: `translateY(${fromTop ? -26 : 26}px) scale(.9)`, opacity: 0, filter: 'blur(4px)' }, { transform: 'none', opacity: 1, filter: 'none' }];
   }
   const origin = (pos) => (pos === 'top-center' ? '50% 0' : pos.startsWith('top') ? '50% 0' : '50% 100%');
+  function place(n) {
+    const inset = Math.max(0, Number(n.cameraInset) || 0);
+    card.style.setProperty('--camera-inset', inset + 'px');
+  }
 
   function show(n) {
     cur = n; leaving = false;
@@ -23,6 +27,7 @@
     document.documentElement.style.setProperty('--accent', n.accent);
     if (n.tint) document.documentElement.style.setProperty('--tint', n.tint);
     card.className = `p-${n.pos}${n.image ? ' img' : ''}`;
+    place(n);
     card.style.transformOrigin = origin(n.pos);
     const notif = $('#notif');
     notif.classList.toggle('has-img', !!n.image);
@@ -74,6 +79,7 @@
   card.addEventListener('click', () => { if (!cur) return; if (cur.clickable) api.event({ id: cur.id, type: 'click' }); hide(); });
 
   api.onShow(show);
+  if (api.onPlace) api.onPlace(place);
   api.ready();
   window.__toast = { show, hide };
 })();

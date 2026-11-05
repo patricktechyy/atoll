@@ -15,6 +15,30 @@ static napi_value string(napi_env env, NSString *value) {
     napi_create_string_utf8(env,(value ?: @"").UTF8String,NAPI_AUTO_LENGTH,&result);
     return result;
 }
+// AppKit reports points, matching Electron's display DIPs (do not multiply by Retina scale).
+// Match by display ID: NSScreen.mainScreen follows focus and may be an external monitor.
+static napi_value screenSafeAreas(napi_env env, napi_callback_info info) {
+    NSArray<NSScreen *> *screens = NSScreen.screens;
+    napi_value result; napi_create_array_with_length(env, screens.count, &result);
+    for (NSUInteger i = 0; i < screens.count; i++) {
+        NSScreen *screen = screens[i];
+        NSRect leftArea = screen.auxiliaryTopLeftArea, rightArea = screen.auxiliaryTopRightArea;
+        CGFloat left = screen.safeAreaInsets.top > 0 ? NSMaxX(leftArea) - NSMinX(screen.frame) : 0;
+        CGFloat width = screen.safeAreaInsets.top > 0 ? NSMinX(rightArea) - NSMaxX(leftArea) : 0;
+        napi_value entry, id, top, x, w;
+        napi_create_object(env, &entry);
+        napi_create_uint32(env, [screen.deviceDescription[@"NSScreenNumber"] unsignedIntValue], &id);
+        napi_create_double(env, screen.safeAreaInsets.top, &top);
+        napi_create_double(env, left, &x);
+        napi_create_double(env, width, &w);
+        napi_set_named_property(env, entry, "id", id);
+        napi_set_named_property(env, entry, "top", top);
+        napi_set_named_property(env, entry, "left", x);
+        napi_set_named_property(env, entry, "width", w);
+        napi_set_element(env, result, (uint32_t)i, entry);
+    }
+    return result;
+}
 static NSString *argument(napi_env env,napi_callback_info info) {
     size_t count=1,n=0; napi_value v;
     napi_get_cb_info(env,info,&count,&v,NULL,NULL);
@@ -129,6 +153,7 @@ static napi_value calendarEvents(napi_env env,napi_callback_info info) {
 
 static napi_value initialize(napi_env env, napi_value exports) {
     napi_property_descriptor methods[]={
+      {"screenSafeAreas",NULL,screenSafeAreas},
       {"calendarEvents",NULL,calendarEvents},{"requestScreen",NULL,request_screen},{"readText",NULL,readText},{"writeText",NULL,writeText},
       {"availableFormats",NULL,formats},{"has",NULL,hasType},{"readPNG",NULL,readPNG},{"writePNG",NULL,writePNG}
     };
